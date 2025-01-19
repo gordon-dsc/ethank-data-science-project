@@ -3,6 +3,19 @@ title: "Data Import Script"
 format: html
 ---
 
-```{r packages}
+# Libraries and Packages
 
+Install needed packages for data import and collection
+
+```{r packages}
+install.packages("tidyverse")
+install.packages("rvest")
+library(tidyverse)
+library(rvest)
 ```
+
+# Data Collection
+
+Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2014 through December 31, 2024). The resulting data set will have variables for title, date publication, and journal column. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
+
+## Web-scrapping
