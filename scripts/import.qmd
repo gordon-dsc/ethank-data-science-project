@@ -10,12 +10,26 @@ Install needed packages for data import and collection
 ```{r packages}
 install.packages("tidyverse")
 install.packages("rvest")
+install.packages("chromote")
 library(tidyverse)
 library(rvest)
+library(chromote)
 ```
 
 # Data Collection
 
 Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2014 through December 31, 2024). The resulting data set will have variables for title, date publication, and journal column. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
 
+To evaluate how news sentiment effects the markets daily stock market prices and valuations based on the S&P500 will be obtained from a variety of websites.
+
 ## Web-scrapping
+
+The first web scrapping task will create a data set from the Wall Street Journal archives
+
+```{r}
+#url for Wall Street Journal archives
+wsj_url <- "https://www.wsj.com/news/archive/years"
+
+#scrape the data from the archives
+website <- read_html_live(wsj_url)
+```
