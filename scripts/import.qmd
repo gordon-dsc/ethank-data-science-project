@@ -33,7 +33,7 @@ wsj_url <- "https://www.wsj.com/news/archive/years"
 
 #open headless browser tab and navigate to WSJ archive page
 brow <- ChromoteSession$new()
-brow$view()
+#brow$view()
 brow$Page$navigate(wsj_url)
 brow$Page$loadEventFired() #pasues R functions until page loads
 
@@ -49,11 +49,11 @@ read_html(wsj_url)|>
 
 
 #open new tab
-brow1 <- brow$new_session()
+#brow1 <- brow$new_session()
 
 #close current tab
-brow$close()
+#brow$close()
 
 #shut down browser
-brow$parent$close()
+#brow$parent$close()
 ```
