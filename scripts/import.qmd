@@ -18,7 +18,7 @@ library(chromote)
 
 # Data Collection
 
-Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2014 through December 31, 2024). The resulting data set will have variables for title, date publication, and journal column. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
+Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2015 through December 31, 2024). The resulting data set will have variables for title, date publication, and journal column. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
 
 To evaluate how news sentiment effects the markets daily stock market prices and valuations based on the S&P500 will be obtained from a variety of websites.
 
@@ -30,6 +30,30 @@ The first web scrapping task will create a data set from the Wall Street Journal
 #url for Wall Street Journal archives
 wsj_url <- "https://www.wsj.com/news/archive/years"
 
-#scrape the data from the archives
-website <- read_html_live(wsj_url)
+
+#open headless browser tab and navigate to WSJ archive page
+brow <- ChromoteSession$new()
+brow$view()
+brow$Page$navigate(wsj_url)
+brow$Page$loadEventFired() #pasues R functions until page loads
+
+#get list of all links to archive years
+read_html(wsj_url)|>
+  html_elements(".WSJTheme--month-link--1N8tTFWa") |>
+  html_attr("href") |>
+  enframe(name = NULL, value = "month") |>
+  filter(str_detect(month, 
+                    pattern = paste(c(as.character(c(2015:2024))), collapse = "|"))) |>
+  mutate(full_urls = paste("https://www.wsj.com", month, sep = "")) ->
+  month_urls
+
+
+#open new tab
+brow1 <- brow$new_session()
+
+#close current tab
+brow$close()
+
+#shut down browser
+brow$parent$close()
 ```
