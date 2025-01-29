@@ -26,10 +26,11 @@ To evaluate how news sentiment effects the markets daily stock market prices and
 
 The first web scrapping task will create a data set from the Wall Street Journal archives
 
+First code block will generate all daily archive URLs from the time period
+
 ```{r}
 #url for Wall Street Journal archives
 wsj_url <- "https://www.wsj.com/news/archive/years"
-
 
 #open headless browser tab and navigate to WSJ archive page
 options(chromote.headless = "new") #set option to use new headless mode
@@ -89,4 +90,10 @@ brow$close()
 
 #shut down browser
 brow$parent$close()
+```
+
+Next code block visits each daily archive URL in period and scraps title, date of publication, and journal column
+
+```{r}
+
 ```
