@@ -24,6 +24,8 @@ To evaluate how news sentiment effects the markets daily stock market prices and
 
 ## Web-scrapping
 
+### WSJ Scrapping
+
 The first web scrapping task will create a data set from the Wall Street Journal archives
 
 First code block will generate all daily archive URLs from the time period
@@ -85,10 +87,24 @@ brow$view()
 brow$Page$navigate(daily_urls$full_urls[1])
 brow$Page$loadEventFired() #pasues R functions until page loads
 
+x <- 1
+while(x <= length(daily_urls$full_urls[x])){
 #scrape title and column name
 read_html(daily_urls$full_urls[1])|>
   html_elements(".WSJTheme--headlineText--He1ANr9C ")|>
-  html_text2() 
+  html_text2() ->
+  headlines
+
+#scrape title and column name
+read_html(daily_urls$full_urls[1]) |>
+  html_elements() |>
+  html_text2() ->
+  columns
+
+x <- x + 1
+}
+tibble(headlines, columns) -> 
+  wsj_data
 
 
 #close current tab
