@@ -32,13 +32,6 @@ First code block will generate all daily archive URLs from the time period
 #url for Wall Street Journal archives
 wsj_url <- "https://www.wsj.com/news/archive/years"
 
-#open headless browser tab and navigate to WSJ archive page
-options(chromote.headless = "new") #set option to use new headless mode
-brow <- ChromoteSession$new()
-brow$view()
-brow$Page$navigate(wsj_url)
-brow$Page$loadEventFired() #pasues R functions until page loads
-
 #get list of all links to archive months
 read_html(wsj_url)|>
   html_elements(".WSJTheme--month-link--1N8tTFWa") |>
@@ -52,17 +45,12 @@ read_html(wsj_url)|>
 x <- 1
 daily_urls <- tibble(full_urls = character())
 while (x <= length(month_urls$full_urls)) {
-  #open month browser section
-  brow_month <- brow$new_session()
-  brow_month$Page$navigate(month_urls$full_urls[x])
-  brow_month$Page$loadEventFired()
-  
   #add urls of days to data set
   read_html(month_urls$full_urls[x]) |>
     html_elements(".WSJTheme--day-link--19pByDpZ") |>
     html_attr("href") |>
     enframe(name = NULL, value = "day") |>
-    mutate(full_daily_urls = paste(month_urls$full_urls[x], day, "")) ->
+    mutate(full_daily_urls = paste("https://www.wsj.com", day, sep = "")) ->
     temp_data
   
   #add daily urls from month to final tibble
@@ -72,28 +60,40 @@ while (x <= length(month_urls$full_urls)) {
       daily_urls
       y <- y +1
   }
-  
-  #close chromate tab
-  brow_month$close()
-  
   x <- x + 1
 }
 
+#make a tibble
+tibble(daily_urls) ->
+  daily_urls
+
 #remove loop items from environment
-rm(brow_month)
 rm(x)
 rm(y)
 rm(temp_data)
+```
+
+Next code block visits each daily archive URL in period and scraps title, date of publication, and journal column
+
+```{r}
+#open headless browser tab and navigate to WSJ archive page
+#MUST HAVE CHROME RUNNING ON COMPUTER DURING EXECUTION (at least in my testing)
+options(chromote.headless = "new") #set option to use new headless mode
+brow <- ChromoteSession$new()
+brow$view()
+
+brow$Page$navigate(daily_urls$full_urls[1])
+brow$Page$loadEventFired() #pasues R functions until page loads
+
+#scrape title and column name
+read_html(daily_urls$full_urls[1])|>
+  html_elements(".WSJTheme--headlineText--He1ANr9C ")|>
+  html_text2() 
+
 
 #close current tab
 brow$close()
 
 #shut down browser
 brow$parent$close()
-```
-
-Next code block visits each daily archive URL in period and scraps title, date of publication, and journal column
-
-```{r}
-
 ```
