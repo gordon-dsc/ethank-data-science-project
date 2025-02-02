@@ -18,7 +18,7 @@ library(chromote)
 
 # Data Collection
 
-Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2015 through December 31, 2024). The resulting data set will have variables for title, date publication, and journal column. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
+Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2015 through December 31, 2024). The resulting data set will have variables for title, date publication, journal column, and publishing time. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
 
 To evaluate how news sentiment effects the markets daily stock market prices and valuations based on the S&P500 will be obtained from a variety of websites.
 
@@ -75,7 +75,7 @@ rm(y)
 rm(temp_data)
 ```
 
-Next code block visits each daily archive URL in period and scraps title, date of publication, and journal column
+Next code block visits each daily archive URL in period and scraps title, date of publication, journal column, and publishing time
 
 ```{r}
 #open headless browser tab and navigate to WSJ archive page
@@ -84,26 +84,39 @@ options(chromote.headless = "new") #set option to use new headless mode
 brow <- ChromoteSession$new()
 brow$view()
 
-brow$Page$navigate(daily_urls$full_urls[1])
+brow$Page$navigate(daily_urls$full_urls[2])
 brow$Page$loadEventFired() #pasues R functions until page loads
 
 x <- 1
 while(x <= length(daily_urls$full_urls[x])){
+
 #scrape title and column name
 read_html(daily_urls$full_urls[1])|>
   html_elements(".WSJTheme--headlineText--He1ANr9C ")|>
   html_text2() ->
   headlines
 
-#scrape title and column name
+#scrape column name
 read_html(daily_urls$full_urls[1]) |>
-  html_elements() |>
+  html_elements(".WSJTheme--articleType--34Gt-vdG") |>
   html_text2() ->
-  columns
+  column
+
+#scrape publishing time
+read_html(daily_urls$full_urls[1]) |>
+  html_elements(".WSJTheme--timestamp--22sfkNDv") |>
+  html_text2() ->
+  pub_time
+
 
 x <- x + 1
 }
-tibble(headlines, columns) -> 
+
+#find a way to add this into the loop
+tibble(headlines,
+       column,
+       pub_time,
+       url = rep(daily_urls$full_urls[1], length(headlines))) -> 
   wsj_data
 
 
