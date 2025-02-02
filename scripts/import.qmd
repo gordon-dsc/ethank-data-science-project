@@ -82,43 +82,93 @@ Next code block visits each daily archive URL in period and scraps title, date o
 #MUST HAVE CHROME RUNNING ON COMPUTER DURING EXECUTION (at least in my testing)
 options(chromote.headless = "new") #set option to use new headless mode
 brow <- ChromoteSession$new()
-brow$view()
+#brow$view()
 
-brow$Page$navigate(daily_urls$full_urls[2])
-brow$Page$loadEventFired() #pasues R functions until page loads
 
 x <- 1
-while(x <= length(daily_urls$full_urls[x])){
+full_wsj_data <- tibble(
+  headlines = character(),
+  column = character(),
+  pub_time = character(),
+  date = character()
+)
+while(x <= length(daily_urls$full_urls)){
 #check to see if there is a next page button present
+url_temp = daily_urls$full_urls[x]
 
-#scrape title
-read_html(daily_urls$full_urls[1])|>
-  html_elements(".WSJTheme--headlineText--He1ANr9C ")|>
-  html_text2() ->
-  headlines
+repeat{
+  #scrape title
+  read_html(url_temp)|>
+    html_elements(".WSJTheme--headlineText--He1ANr9C ")|>
+    html_text2() -> 
+      headlines
+  
+  #scrape column name
+  read_html(url_temp) |>
+    html_elements(".WSJTheme--articleType--34Gt-vdG") |>
+    html_text2() ->
+    column
+  
+  #scrape publishing time
+  read_html(url_temp) |>
+    html_elements(".WSJTheme--timestamp--22sfkNDv") |>
+    html_text2() ->
+    pub_time
+  
+  #open new tab
+  brow_temp <- brow$new_session()
+  brow_temp$Page$navigate(url_temp) #navigate to tab
+  Sys.sleep(0.5) #wait for website to load
+  
+  #retrive bottom panel HTML context
+  node <- brow_temp$DOM$querySelector(
+    nodeId = brow_temp$DOM$getDocument()$root$nodeId,
+    selector = ".WSJTheme--SimplePaginator__right--2syX0g5l"
+  )
+  
+  #if next page button exits change url to next page else advance to next day
+  if(node$nodeId > 0) {
+    #get outerHTML of the node
+    html_content <- brow_temp$DOM$getOuterHTML(nodeId = node$nodeId)
+    html_content$outerHTML |>
+      minimal_html() |>
+      html_elements("a") |>
+      html_attr("href") -> url_end
+  
+    #add data to full_wsj_data
+    full_wsj_data |>
+      add_row(headlines = headlines,
+              column = column,
+              pub_time = pub_time,
+              date = rep(url_temp, length(headlines))) ->
+      full_wsj_data
+    
+    #update temp url
+    url_temp <- paste("https://www.wsj.com", url_end, sep = "")
+    
+    #close tab
+    brow_temp$close()
+    rm(brow_temp)
+    
+    } else {
+      #add data to full_wsj_data
+      full_wsj_data |>
+        add_row(headlines = headlines, 
+                column = column,
+                pub_time = pub_time,
+                date = rep(url_temp, length(headlines))) ->
+      full_wsj_data
 
-#scrape column name
-read_html(daily_urls$full_urls[1]) |>
-  html_elements(".WSJTheme--articleType--34Gt-vdG") |>
-  html_text2() ->
-  column
+      #close tab
+      brow_temp$close()
+      rm(brow_temp)
+    }
 
-#scrape publishing time
-read_html(daily_urls$full_urls[1]) |>
-  html_elements(".WSJTheme--timestamp--22sfkNDv") |>
-  html_text2() ->
-  pub_time
-
-
-x <- x + 1
+  if(node$nodeId < 1){break}
 }
 
-#find a way to add this into the loop
-tibble(headlines,
-       column,
-       pub_time,
-       url = rep(daily_urls$full_urls[1], length(headlines))) -> 
-  wsj_data
+  x <- x + 1
+}
 
 
 #close current tab
