@@ -118,8 +118,7 @@ repeat{
   #open new tab
   brow_temp <- brow$new_session()
   brow_temp$Page$navigate(url_temp) #navigate to tab
-  Sys.sleep(0.5) #wait for website to load
-  
+  Sys.sleep(1) #wait for website to load
   #retrive bottom panel HTML context
   node <- brow_temp$DOM$querySelector(
     nodeId = brow_temp$DOM$getDocument()$root$nodeId,
