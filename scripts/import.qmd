@@ -90,7 +90,7 @@ full_wsj_data <- tibble(
   headlines = character(),
   column = character(),
   pub_time = character(),
-  date = character()
+  url = character()
 )
 while(x <= length(daily_urls$full_urls)){
 #check to see if there is a next page button present
@@ -139,7 +139,7 @@ repeat{
       add_row(headlines = headlines,
               column = column,
               pub_time = pub_time,
-              date = rep(url_temp, length(headlines))) ->
+              url = rep(url_temp, length(headlines))) ->
       full_wsj_data
     
     #update temp url
@@ -155,7 +155,7 @@ repeat{
         add_row(headlines = headlines, 
                 column = column,
                 pub_time = pub_time,
-                date = rep(url_temp, length(headlines))) ->
+                url = rep(url_temp, length(headlines))) ->
       full_wsj_data
 
       #close tab
