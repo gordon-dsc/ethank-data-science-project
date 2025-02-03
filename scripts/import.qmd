@@ -175,6 +175,11 @@ brow$close()
 
 #shut down browser
 brow$parent$close()
+
+#write data to csv in imported data file
+getwd()
+write_csv(x = full_wsj_data,
+          file = "../data/imported_data/wsj_data.csv")
 ```
 
 ### Stock Data Scrapping
