@@ -3,4 +3,4 @@ List of data sources from which import was completed
 wsj_data was scrapped from the WSJ archive 
 website (https://www.wsj.com/news/archive/years) 
 by following links down to the daily level from the 
-period Jan 1, 2014 to Dec 31, 2024
+period Jan 1, 2015 to Dec 31, 2024

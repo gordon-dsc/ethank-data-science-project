@@ -135,12 +135,16 @@ repeat{
       html_attr("href") -> url_end
   
     #add data to full_wsj_data
-    full_wsj_data |>
-      add_row(headlines = headlines,
-              column = column,
-              pub_time = pub_time,
+    y <- 1
+    while(y <= length(headlines)){
+      add_row(full_wsj_data, 
+              headlines = headlines[y],
+              column = column[y],
+              pub_time = pub_time[y],
               url = rep(url_temp, length(headlines))) ->
       full_wsj_data
+      y <- y +1
+  }
     
     #update temp url
     url_temp <- paste("https://www.wsj.com", url_end, sep = "")
@@ -151,12 +155,16 @@ repeat{
     
     } else {
       #add data to full_wsj_data
-      full_wsj_data |>
-        add_row(headlines = headlines, 
-                column = column,
-                pub_time = pub_time,
+      y <- 1
+      while(y <= length(headlines)){
+        add_row(full_wsj_data, 
+                headlines = headlines[y],
+                column = column[y],
+                pub_time = pub_time[y],
                 url = rep(url_temp, length(headlines))) ->
-      full_wsj_data
+        full_wsj_data
+        y <- y +1
+    }
 
       #close tab
       brow_temp$close()

@@ -2,7 +2,7 @@ There are several imported data sets: wsj_data, s&p_data, pe_data
 
 wsj_data:
 Contains all the headlines, journal columns, and pulbishing times for articles
-during the period of Jan 1, 2014 to Dec 31, 2024
+during the period of Jan 1, 2015 to Dec 31, 2024
 
 Description of Variables
 headlines = character data, the headlines of articles
