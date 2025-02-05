@@ -75,7 +75,52 @@ rm(y)
 rm(temp_data)
 ```
 
-Next code block visits each daily archive URL in period and scraps title, date of publication, journal column, and publishing time
+split data up into ten blocks to make scrape faster
+
+```{r}
+#split data up into ten blocks to make scrape faster
+daily_urls |>
+  slice(1:365) ->
+  daily_urls_1
+
+daily_urls |>
+  slice(366:730) ->
+  daily_urls_2
+
+daily_urls |>
+  slice(731:1095) ->
+  daily_urls_3
+
+daily_urls |>
+  slice(1096:1460) ->
+  daily_urls_4
+
+daily_urls |>
+  slice(1461:1825) ->
+  daily_urls_5
+
+daily_urls |>
+  slice(1826:2190) ->
+  daily_urls_6
+
+daily_urls |>
+  slice(2191:2555) ->
+  daily_urls_7
+
+daily_urls |>
+  slice(2556:2920) ->
+  daily_urls_8
+
+daily_urls |>
+  slice(2921:3285) ->
+  daily_urls_9
+
+daily_urls |>
+  slice(3286:3653) ->
+  daily_urls_10
+```
+
+Next code block visits each daily archive URL in period and scraps title, date of publication, journal column, and publishing time. Run this chuck on each of the daily url blocks changing the reference in line 140 and 142 for each
 
 ```{r}
 #open headless browser tab and navigate to WSJ archive page
@@ -92,9 +137,10 @@ full_wsj_data <- tibble(
   pub_time = character(),
   url = character()
 )
-while(x <= length(daily_urls$full_urls)){
+while(x <= length(daily_urls_2$full_urls)){
 #check to see if there is a next page button present
-url_temp = daily_urls$full_urls[x]
+url_temp = daily_urls_2$full_urls[x]
+print(x)
 
 repeat{
   #scrape title
