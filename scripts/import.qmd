@@ -137,9 +137,9 @@ full_wsj_data <- tibble(
   pub_time = character(),
   url = character()
 )
-while(x <= length(daily_urls_2$full_urls)){
+while(x <= length(daily_urls_3$full_urls)){
 #check to see if there is a next page button present
-url_temp = daily_urls_2$full_urls[x]
+url_temp = daily_urls_3$full_urls[x]
 print(x)
 
 repeat{
