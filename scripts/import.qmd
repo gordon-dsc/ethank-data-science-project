@@ -137,9 +137,9 @@ full_wsj_data <- tibble(
   pub_time = character(),
   url = character()
 )
-while(x <= length(daily_urls_9$full_urls)){
+while(x <= length(daily_urls_10$full_urls)){
 #check to see if there is a next page button present
-url_temp = daily_urls_9$full_urls[x]
+url_temp = daily_urls_10$full_urls[x]
 print(x)
 
 repeat{
@@ -233,7 +233,7 @@ brow$parent$close()
 #write data to csv in imported data file
 getwd()
 write_csv(x = full_wsj_data,
-          file = "./data/imported_data/wsj_data_9.csv")
+          file = "./data/imported_data/wsj_data_10.csv")
 ```
 
 ### Stock Data Scrapping
@@ -243,9 +243,14 @@ Will obtain S&P 500 data (\^GSPC) from yahoo finance over the time period
 ```{r}
 yahoo_fin_url <- "https://finance.yahoo.com/quote/%5EGSPC/history/?period1=1388534400&period2=1735603200"
 
+#attempt to read the table from the html page
 read_html(yahoo_fin_url) |>
   html_elements(".talbe-container yf-1jecxey") |>
-  html_table()
+  html_table
+
+read_html(yahoo_fin_url) |>
+  html_elements(".yf-1jecxey") |>
+  html_text2()
 ```
 
 ```{r}
@@ -256,9 +261,9 @@ daily_urls_7 |>
   slice(224:365) ->
   daily_urls_7b
 
-add_row(full_wsj_data,
+add_row(f,
         headlines = full_wsj_data$headlines,
         column = full_wsj_data$column,
         pub_time = full_wsj_data$pub_time,
-        url = full_wsj_data$url) -> f
+        url = full_wsj_data$url) -> t
 ```
