@@ -347,4 +347,8 @@ yahoo_fin_url <- "https://finance.yahoo.com/quote/%5EGSPC/history/?period1=13885
 read_html(yahoo_fin_url) |>
   html_elements(".talbe-container yf-1jecxey") |>
   html_table()
+
+read_html(yahoo_fin_url) |>
+  html_elements(".yf-1jecxey") |>
+  html_text2()
 ```
