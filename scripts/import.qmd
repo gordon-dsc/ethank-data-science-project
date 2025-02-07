@@ -137,9 +137,9 @@ full_wsj_data <- tibble(
   pub_time = character(),
   url = character()
 )
-while(x <= length(daily_urls_10$full_urls)){
+while(x <= length(daily_urls_10c$full_urls)){
 #check to see if there is a next page button present
-url_temp = daily_urls_10$full_urls[x]
+url_temp = daily_urls_10c$full_urls[x]
 print(x)
 
 repeat{
@@ -257,13 +257,13 @@ read_html(yahoo_fin_url) |>
 full_wsj_data ->
   full_wsj_data_7a
 
-daily_urls_7 |>
-  slice(224:365) ->
-  daily_urls_7b
+daily_urls_10b |>
+  slice(219:368) ->
+  daily_urls_10c
 
-add_row(f,
+add_row(t,
         headlines = full_wsj_data$headlines,
         column = full_wsj_data$column,
         pub_time = full_wsj_data$pub_time,
-        url = full_wsj_data$url) -> t
+        url = full_wsj_data$url) -> n
 ```

@@ -332,6 +332,9 @@ add_row(full_wsj_data,
           column = wsj_data_10$column,
           pub_time = wsj_data_10$pub_time,
           url = wsj_data_10$url) -> full_wsj_data
+
+write_csv(x = full_wsj_data,
+            file = "../data/imported_data/full_wsj_data.csv")
 ```
 
 ### Stock Data Scrapping
