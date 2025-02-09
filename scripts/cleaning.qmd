@@ -3,6 +3,46 @@ title: "Data Cleaning Script"
 format: html
 ---
 
+# Libraries and Packages
+
 ```{r packages}
+install.packages("tidyverse")
+install.packages("tidytext")
+library(tidyverse)
+library(tidytext)
+```
+
+# Load Data Sets
+
+Load in data sets from import folder
+
+```{r}
+#laod in wsj_data
+read_csv("../data/imported_data/full_wsj_data.csv") ->
+  wsj_data
+
+#load in spy_data
+read_csv("../data/imported_data/spy_data.csv") ->
+  spy_data
 
 ```
+
+# WSJ Data
+
+Cleaning WSJ data to extract data from URL and add in sentiment score
+
+```{r}
+#extract data from url column
+wsj_data |>
+  mutate(date = parse_date(str_extract(
+    wsj_data$url, 
+    pattern = "[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]"))) ->
+  wsj_data
+
+#add sentiment scores
+wsj_data |>
+  mutate(sentiment = tidytext::get_sentiments(wsj_data$headlines)) ->
+  test
+```
+
+# SPY Data

@@ -337,18 +337,41 @@ write_csv(x = full_wsj_data,
             file = "../data/imported_data/full_wsj_data.csv")
 ```
 
-### Stock Data Scrapping
+### Stock Data
 
-Will obtain S&P 500 data (\^GSPC) from yahoo finance over the time period
+Downloaded S&P 500 data (SPX) from investing.com over the time period and saved to import data
 
 ```{r}
-yahoo_fin_url <- "https://finance.yahoo.com/quote/%5EGSPC/history/?period1=1388534400&period2=1735603200"
+#website url, enter the time period (Jan, 1 2015 to Dec 31, 2024) download file
+investing_url <- "https://www.investing.com/indices/us-spx-500-historical-data"
 
-read_html(yahoo_fin_url) |>
-  html_elements(".talbe-container yf-1jecxey") |>
-  html_table()
+#load file into Rstudio
+read_csv("../data/imported_data/S&P 500 Historical Data.csv") |>
+  select(1,2,3,4,5,7) |>
+  janitor::clean_names() ->
+  spy_data
 
-read_html(yahoo_fin_url) |>
-  html_elements(".yf-1jecxey") |>
-  html_text2()
+write_csv(x = spy_data,
+            file = "../data/imported_data/spy_data.csv")
+```
+
+### P/E Ratio Data
+
+Download S&P 500 historical P/E ratios from Macrotrends. Used the 20 year option and then selected the date range under inspection
+
+```{r}
+#url of macrotrends website
+macrotrends_url <- "https://www.macrotrends.net/2577/sp-500-pe-ratio-price-to-earnings-chart"
+
+#start and end date
+start_date <- make_date(year = "2015", month = "1", day = "1")
+end_date <- make_date(year = "2024", month = "12", day = "31")
+
+#load in data file to Rstudio
+read_csv("../data/imported_data/pe_data.csv",
+         skip = 15) |>
+  filter(date >= start_date) -> pe_ratio
+
+write_csv(pe_ratio,
+          file = "../data/imported_data/pe_ratio.csv")
 ```

@@ -4,3 +4,12 @@ wsj_data was scrapped from the WSJ archive
 website (https://www.wsj.com/news/archive/years) 
 by following links down to the daily level from the 
 period Jan 1, 2015 to Dec 31, 2024
+
+
+Historical SPY price data was downloaded from investing.com at the following
+webstie link (https://www.investing.com/indices/us-spx-500-historical-data).
+Entered the date range Jan 1, 2015 to Dec 31, 2024 and downloading the csv
+
+Historical PE data was downloaded from macrotrends.com at the following 
+website link (https://www.investing.com/indices/us-spx-500-historical-data).
+Selected the 20 year option and then downloaded the csv file
