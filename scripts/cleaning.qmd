@@ -7,9 +7,9 @@ format: html
 
 ```{r packages}
 install.packages("tidyverse")
-install.packages("tidytext")
+install.packages("sentimentr")
 library(tidyverse)
-library(tidytext)
+library(sentimentr)
 ```
 
 # Load Data Sets
@@ -39,10 +39,15 @@ wsj_data |>
     pattern = "[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]"))) ->
   wsj_data
 
-#add sentiment scores
+
+#add sentiment scores utilizing sentimentr::sentiment() function
 wsj_data |>
-  mutate(sentiment = tidytext::get_sentiments(wsj_data$headlines)) ->
+  mutate(sentiment = sentiment_by(headlines)) ->
   test
+
+#remove unneeded columns
+#group by day to get sentiment score of day
+#add daily sentiment scores to stock data frame
 ```
 
 # SPY Data
