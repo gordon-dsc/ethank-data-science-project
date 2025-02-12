@@ -43,11 +43,21 @@ wsj_data |>
 #add sentiment scores utilizing sentimentr::sentiment() function
 wsj_data |>
   mutate(sentiment = sentiment_by(headlines)) ->
-  test
+  wsj_data_sent
 
 #remove unneeded columns
-#group by day to get sentiment score of day
-#add daily sentiment scores to stock data frame
+wsj_data_sent |>
+  unnest_wider(sentiment) |>
+  select(-element_id, -word_count, -sd) |>
+  rename(sentiment = ave_sentiment) ->
+  wsj_data_sent
+
+
+#save new csv file to cleaned file
+write_csv(x = wsj_data_sent,
+          file = "../data/cleaned_data/wsj_data_sent.csv")
 ```
 
 # SPY Data
+
+Add sentiment data to spy_data
