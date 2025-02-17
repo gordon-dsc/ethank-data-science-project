@@ -1,1 +1,21 @@
-description of data and variables
+wsj_data_sent:
+contains the wsj_data with date object and sentiment score
+headlines: headline of article
+column: column underwhich it was published
+pub_time: time aritlce was published
+url: url to article in wsj archives
+date: date time object
+sentiment: sentiment score for headline 
+
+full_data:
+contains the S&P price data from 10 year period with pe_ratio and average wsj
+article sentiment for the day
+
+date: date of the observations
+price: price of S&P at close of day
+open: open during the day
+high: highest S&P price during the day
+low: lowest S&P price during the day
+change_percent: daily % change in price
+daily_sent: average sentiment score of wsj articles published that day
+pe_ratio: price to earnings ratio of S&P

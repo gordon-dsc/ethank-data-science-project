@@ -1,1 +1,1 @@
-srouce of data and citations
+all data comes from imported data folder, see source.txt there for sources

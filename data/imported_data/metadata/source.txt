@@ -10,6 +10,5 @@ Historical SPY price data was downloaded from investing.com at the following
 webstie link (https://www.investing.com/indices/us-spx-500-historical-data).
 Entered the date range Jan 1, 2015 to Dec 31, 2024 and downloading the csv
 
-Historical PE data was downloaded from macrotrends.com at the following 
-website link (https://www.investing.com/indices/us-spx-500-historical-data).
-Selected the 20 year option and then downloaded the csv file
+Historical PE data was scrapped from multpl.com at the following 
+website link (https://www.multpl.com/s-p-500-pe-ratio/table/by-month).

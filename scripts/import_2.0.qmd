@@ -357,21 +357,24 @@ write_csv(x = spy_data,
 
 ### P/E Ratio Data
 
-Download S&P 500 historical P/E ratios from Macrotrends. Used the 20 year option and then selected the date range under inspection
+Scrape S&P 500 historical P/E ratios from multpl.com
 
 ```{r}
-#url of macrotrends website
-macrotrends_url <- "https://www.macrotrends.net/2577/sp-500-pe-ratio-price-to-earnings-chart"
+#url for pe data
+multpl_url <- "https://www.multpl.com/s-p-500-pe-ratio/table/by-month"
 
-#start and end date
-start_date <- make_date(year = "2015", month = "1", day = "1")
-end_date <- make_date(year = "2024", month = "12", day = "31")
-
-#load in data file to Rstudio
-read_csv("../data/imported_data/pe_data.csv",
-         skip = 15) |>
-  filter(date >= start_date) -> pe_ratio
-
+#extract data from url table
+read_html(multpl_url) |>
+  html_element("#datatable") |>
+  html_table() |>
+  janitor::clean_names() |>
+  mutate(date = parse_date_time(date, orders = "mdy"),
+         pe_ratio = as.numeric(str_extract(value, pattern = "[0-9]...."))) |>
+  filter(date < mdy("1-1-2025") & date > mdy("12-1-2014")) |>
+  select(-value) -> 
+  pe_ratio
+  
+#save pe data
 write_csv(pe_ratio,
           file = "../data/imported_data/pe_ratio.csv")
 ```

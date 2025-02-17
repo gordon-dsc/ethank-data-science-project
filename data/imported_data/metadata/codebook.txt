@@ -22,4 +22,4 @@ change % = percentage change from the day before
 
 pe_data:
 data: month of the PE ratio
-value: the PE ratio for the month
+pe_ratio: the PE ratio for the month
