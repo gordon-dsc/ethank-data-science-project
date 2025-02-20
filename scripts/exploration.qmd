@@ -3,6 +3,36 @@ title: "Data Analysis Script"
 format: html
 ---
 
-```{r packages}
+# Libraries and Packages
 
+```{r packages}
+install.packages("tidyverse")
+library(tidyverse)
+```
+
+# Import Data
+
+```{r}
+read.csv("../data/cleaned_data/full_data.csv") -> full_data
+```
+
+# Exploration 1
+
+Standardization of sentiment data and first look at correlations with correlation heat map
+
+```{r}
+#scale sentiment data
+full_data |>
+  mutate(across(.cols = daily_sent,
+                .fns = scale,
+                .names = "daily_sent_scaled")) ->
+  full_data
+
+#generate correlation heat map
+full_data |>
+  select(2:8)|>
+  cor() |>
+  reshape2::melt() |>
+    ggplot(aes(x = Var1, y = Var2, fill = value)) +
+     geom_tile()
 ```
