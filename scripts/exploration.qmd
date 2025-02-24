@@ -23,16 +23,67 @@ Standardization of sentiment data and first look at correlations with correlatio
 ```{r}
 #scale sentiment data
 full_data |>
-  mutate(across(.cols = daily_sent,
-                .fns = scale,
-                .names = "daily_sent_scaled")) ->
-  full_data
+  mutate_at(vars(daily_sent, change_percent, pe_ratio), scale) ->
+  full_data_ep1
 
 #generate correlation heat map
-full_data |>
+full_data_ep1 |>
   select(2:8)|>
   cor() |>
   reshape2::melt() |>
     ggplot(aes(x = Var1, y = Var2, fill = value)) +
      geom_tile()
+```
+
+Test daily_sent against a couple variables to see correlation
+
+```{r}
+#daily sentiment and percent change
+#scale sentiment and change_percent data
+full_data |>
+  mutate_at(vars(daily_sent, change_percent), scale) ->
+  full_data_ep2
+
+full_data_ep2 |>
+  ggplot(mapping = aes(x = daily_sent, y = change_percent)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs Percent Change",
+       x = "Daily Sentiment",
+       y= "Percent Change") +
+  theme_minimal()
+```
+
+```{r}
+#daily sentiment and pe_ratio
+#scale sentiment and pe_ratio
+full_data |>
+  mutate_at(vars(daily_sent, pe_ratio), scale) ->
+  full_data_ep3
+
+full_data_ep3 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+```
+
+```{r}
+#daily sentiment and pe_ratio and change_percent
+#scale sentiment and pe_ratio
+full_data |>
+  mutate_at(vars(daily_sent, pe_ratio, change_percent), scale) ->
+  full_data_ep4
+
+full_data_ep4 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point(mapping = aes(color = change_percent, alpah = change_percent)) +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
 ```
