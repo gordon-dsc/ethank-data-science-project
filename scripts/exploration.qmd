@@ -14,9 +14,61 @@ library(tidyverse)
 
 ```{r}
 read.csv("../data/cleaned_data/full_data.csv") -> full_data
+
+#add change in pe_ratio column
+full_data |>
+  mutate(change_pe = pe_ratio - lead(pe_ratio)) ->
+  full_data
 ```
 
 # Exploration 1
+
+normal heat map
+
+```{r}
+full_data |>
+  select(2:9)|>
+  cor() |>
+  reshape2::melt() |>
+    ggplot(aes(x = Var1, y = Var2, fill = value)) +
+     geom_tile()
+```
+
+Model addressing original question, daily sentiment vs valuations (PE ratio)
+
+```{r}
+#relationship between daily sentiment and pe ratio itself
+full_data |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#relationship between daily sentiment and change in pe ratio
+full_data |>
+  ggplot(mapping = aes(x = daily_sent, y = change_pe)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs Change in PE Ratio",
+       x = "Daily Sentiment",
+       y= "Change in PE Ratio") +
+  theme_minimal()
+
+
+
+#fit linear model to check for statistical significance 
+lm(pe_ratio ~ daily_sent, full_data) -> lm_ep_1
+summary(lm_ep)
+```
+
+Relationship between daily_sent and pe_ratio is statically significant but does not explain much of the variation in valuations
+
+Perhaps scaling the variables will provide a better model
+
+## Scaled
 
 Standardization of sentiment data and first look at correlations with correlation heat map
 
@@ -24,10 +76,10 @@ Standardization of sentiment data and first look at correlations with correlatio
 #scale sentiment data
 full_data |>
   mutate_at(vars(daily_sent, change_percent, pe_ratio), scale) ->
-  full_data_ep1
+  full_data_ep1.1
 
 #generate correlation heat map
-full_data_ep1 |>
+full_data_ep1.1 |>
   select(2:8)|>
   cor() |>
   reshape2::melt() |>
@@ -38,30 +90,13 @@ full_data_ep1 |>
 Test daily_sent against a couple variables to see correlation
 
 ```{r}
-#daily sentiment and percent change
-#scale sentiment and change_percent data
-full_data |>
-  mutate_at(vars(daily_sent, change_percent), scale) ->
-  full_data_ep2
-
-full_data_ep2 |>
-  ggplot(mapping = aes(x = daily_sent, y = change_percent)) +
-  geom_point() +
-  geom_smooth(se = FALSE) +
-  labs(title = "Daily Sentiment vs Percent Change",
-       x = "Daily Sentiment",
-       y= "Percent Change") +
-  theme_minimal()
-```
-
-```{r}
 #daily sentiment and pe_ratio
 #scale sentiment and pe_ratio
 full_data |>
   mutate_at(vars(daily_sent, pe_ratio), scale) ->
-  full_data_ep3
+  full_data_ep1.2
 
-full_data_ep3 |>
+full_data_ep1.2 |>
   ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
   geom_point() +
   geom_smooth(se = FALSE) +
@@ -69,16 +104,22 @@ full_data_ep3 |>
        x = "Daily Sentiment",
        y= "PE Ratio") +
   theme_minimal()
+
+#fit linear model to check for statistical significance 
+lm(pe_ratio ~ daily_sent, full_data_ep2) -> lm_ep1.2
+summary(lm_ep1.2)
 ```
+
+Intercept is not statistically significant
 
 ```{r}
 #daily sentiment and pe_ratio and change_percent
-#scale sentiment and pe_ratio
+#scale all variables
 full_data |>
   mutate_at(vars(daily_sent, pe_ratio, change_percent), scale) ->
-  full_data_ep4
+  full_data_ep1.3
 
-full_data_ep4 |>
+full_data_ep1.3 |>
   ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
   geom_point(mapping = aes(color = change_percent, alpah = change_percent)) +
   geom_smooth(se = FALSE) +
@@ -86,4 +127,76 @@ full_data_ep4 |>
        x = "Daily Sentiment",
        y= "PE Ratio") +
   theme_minimal()
+
+#model usines daily_sent and change percent as 
+lm(pe_ratio ~ daily_sent + change_percent, full_data_ep1.3) -> lm_ep1.3
+summary(lm_ep1.3)
 ```
+
+# Exploration 2
+
+The straight comparison between PE ratio and daily sentiment is not significant but unhelpful in crafting a model that can predict market valuations. Utilizing previous days sentiment at previous 5 days (1 trading week) or 10 days (2 trading weeks)
+
+```{r}
+#add previous day days of sentiment data and get 5 and 10 day averages
+full_data |>
+  mutate(sent_prev_1 = lead(daily_sent),
+         sent_prev_2 = lead(daily_sent, n = 2),
+         sent_prev_3 = lead(daily_sent, n = 3),
+         sent_prev_4 = lead(daily_sent, n = 4),
+         sent_prev_5 = lead(daily_sent, n = 5),
+         sent_prev_6 = lead(daily_sent, n = 6),
+         sent_prev_7 = lead(daily_sent, n = 7),
+         sent_prev_8 = lead(daily_sent, n = 8),
+         sent_prev_9 = lead(daily_sent, n = 9),
+         sent_prev_10 = lead(daily_sent, n = 10)) |>
+  drop_na() |>
+  mutate(five_day_avg_sent = (sent_prev_1+sent_prev_2+sent_prev_3+sent_prev_4+sent_prev_5)/5,
+         ten_day_avg_sent = (sent_prev_1+sent_prev_2+sent_prev_3+sent_prev_4+sent_prev_5+sent_prev_6+sent_prev_7+sent_prev_8+sent_prev_9+sent_prev_10)/10) ->
+  full_data_ep2 
+```
+
+Now lets look at relationship between 5 and 10 day sentiment averages and pe_ratio
+
+```{r}
+#five day avg sent graph
+full_data_ep2 |>
+  ggplot(mapping = aes(x = five_day_avg_sent, y = pe_ratio)) +
+  geom_point(mapping = aes(color = change_percent, alpah = change_percent)) +
+  geom_smooth(se = FALSE) +
+  labs(title = "5 Day Avg Daily Sentiment vs PE Ratio",
+       x = "5 Day Avg Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#ten day avg sent graph
+full_data_ep2 |>
+  ggplot(mapping = aes(x = ten_day_avg_sent, y = pe_ratio)) +
+  geom_point(mapping = aes(color = change_percent, alpah = change_percent)) +
+  geom_smooth(se = FALSE) +
+  labs(title = "10 Day Avg Daily Sentiment vs PE Ratio",
+       x = "10 Day Avg Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#five day avg sent model
+lm(pe_ratio ~ five_day_avg_sent + daily_sent, full_data_ep2) -> lm_ep2.1
+summary(lm_ep2.1)
+
+#ten day avg sent model
+lm(pe_ratio ~ ten_day_avg_sent + daily_sent, full_data_ep2) -> lm_ep2.2
+summary(lm_ep2.2)
+
+#combine 5 and 10 day averages
+lm(pe_ratio ~ five_day_avg_sent * ten_day_avg_sent + daily_sent, full_data_ep2) -> lm_ep2.3
+summary(lm_ep2.3)
+
+lm(pe_ratio ~ daily_sent * sent_prev_1 * sent_prev_2 * sent_prev_3 * sent_prev_4 * sent_prev_5 * sent_prev_6 * sent_prev_7 * sent_prev_8 * sent_prev_9 * sent_prev_10, full_data_ep2) |>
+  summary()
+```
+
+Including previous days of sentiment seems to improve models explanation but still leaves much to be desired
+
+# Exploration 3
+
+This will go back to the original wsj_data and change the select journal columns to see if any have greater impact than others on valuations
