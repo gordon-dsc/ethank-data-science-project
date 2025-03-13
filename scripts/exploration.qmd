@@ -61,7 +61,7 @@ full_data |>
 
 #fit linear model to check for statistical significance 
 lm(pe_ratio ~ daily_sent, full_data) -> lm_ep_1
-summary(lm_ep)
+summary(lm_ep_1)
 ```
 
 Relationship between daily_sent and pe_ratio is statically significant but does not explain much of the variation in valuations
@@ -97,7 +97,7 @@ full_data |>
   full_data_ep1.2
 
 full_data_ep1.2 |>
-  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  ggplot(mapping = aes(x = daily_sent, y = change_percent)) +
   geom_point() +
   geom_smooth(se = FALSE) +
   labs(title = "Daily Sentiment vs PE Ratio",
@@ -199,4 +199,65 @@ Including previous days of sentiment seems to improve models explanation but sti
 
 # Exploration 3
 
+## Create list of data frames by column
+
 This will go back to the original wsj_data and change the select journal columns to see if any have greater impact than others on valuations
+
+```{r}
+#get wsj data before daily compilation
+read.csv("../data/cleaned_data/wsj_data_sent.csv") -> wsj_data_sent
+
+#how many different columns are there = 2013
+unique(wsj_data_sent$column) -> unique_col
+length(unique_col)
+
+#make list of data set filtered by unique col
+wsj_data_sent_col <- vector("list", length(unique_col))
+k <- 1
+while(k <= length(unique_col)){
+  wsj_data_sent |>
+    filter(column ==  unique_col[k]) ->
+    temp
+  
+  list(temp) -> wsj_data_sent_col[k]
+  k<- k + 1
+}
+```
+
+## Import PE and SPY Data
+
+For every different column we will: average sent by day, connect with corresponding spy data and pe ratio
+
+```{r}
+#import PE data
+read.csv("../data/cleaned_data/pe_data.csv") -> pe_data
+
+#import SPY data with some small modifications for easier join
+read_csv("../data/imported_data/spy_data.csv") |>
+    mutate(change_percent = parse_number(change_percent)/100,
+           date = parse_date_time(date, orders = "mdy"),
+           month = month(date),
+           year = year(date))->
+  spy_data
+```
+
+## Create daily sentiment data by columns
+
+```{r}
+#for every unique column
+i <- 1
+while(i <=  length(wsj_data_sent_col)){
+  wsj_data_sent_col[[i]] |>
+      group_by(date) |>
+      summarise(daily_sent = mean(sentiment)) |>
+      select(date, daily_sent) |>
+      inner_join(spy_data, by = c("date")) |>
+      inner_join(pe_data, by = c("month", "year")) |>
+      mutate(pe_ratio = price/earnings) |>
+      select(-date.y, -month, - year, -earnings) |>
+      rename(date = date.x) -> temp
+  
+  list(temp) -> wsj_data_sent_col[i]
+  i <- i + 1
+}
+```

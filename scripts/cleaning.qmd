@@ -86,6 +86,10 @@ spy_data |>
   select(month, year, earnings) |>
   inner_join(pe_data, by = c("month", "year")) ->
   pe_data
+
+#save new csv file to cleaned file
+write_csv(x = pe_data,
+          file = "../data/cleaned_data/pe_data.csv")
 ```
 
 # SPY Data
