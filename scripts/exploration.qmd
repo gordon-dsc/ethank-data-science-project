@@ -219,6 +219,11 @@ while(k <= length(unique_col)){
     filter(column ==  unique_col[k]) ->
     temp
   
+  #change date object to date time
+  temp |>
+    mutate(date = parse_date_time(date, orders = "ymd")) ->
+    temp
+  
   list(temp) -> wsj_data_sent_col[k]
   k<- k + 1
 }
@@ -242,6 +247,8 @@ read_csv("../data/imported_data/spy_data.csv") |>
 ```
 
 ## Create daily sentiment data by columns
+
+Create a list by journal column of all full wsj data with sent and pe_ratio by day
 
 ```{r}
 #for every unique column
