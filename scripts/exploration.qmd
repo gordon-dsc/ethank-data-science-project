@@ -106,7 +106,7 @@ full_data_ep1.2 |>
   theme_minimal()
 
 #fit linear model to check for statistical significance 
-lm(pe_ratio ~ daily_sent, full_data_ep2) -> lm_ep1.2
+lm(pe_ratio ~ daily_sent, full_data_ep1.2) -> lm_ep1.2
 summary(lm_ep1.2)
 ```
 
