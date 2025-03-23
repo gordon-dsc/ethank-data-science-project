@@ -268,3 +268,22 @@ while(i <=  length(wsj_data_sent_col)){
   i <- i + 1
 }
 ```
+
+# Journal Comparison
+
+Run through journal columns to see which have strongest relationship with pe_ratio
+
+```{r}
+#this will run through all journal columns and create list of journal, num_article, R^2, F-stat
+i <- 1
+column_table <- tibble(journal = character(),
+                       num_articles = numeric(),
+                       r_square = numeric(),
+                       f_stat = numeric())
+
+while(i <= length(wsj_data_sent_col)) {
+  temp_lm <- lm(pe_ratio ~ daily_sent, wsj_data_sent_col[[i]])
+  temp_data <- c(unique_col[i], length(wsj_data_sent_col[[i]]), temp_lm$xlevels)
+  
+}
+```
