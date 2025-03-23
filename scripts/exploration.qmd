@@ -281,9 +281,40 @@ column_table <- tibble(journal = character(),
                        r_square = numeric(),
                        f_stat = numeric())
 
+
 while(i <= length(wsj_data_sent_col)) {
+  #check to see if any articles exist
+  if(length(wsj_data_sent_col[[i]]$date) > 0){ 
   temp_lm <- lm(pe_ratio ~ daily_sent, wsj_data_sent_col[[i]])
-  temp_data <- c(unique_col[i], length(wsj_data_sent_col[[i]]), temp_lm$xlevels)
   
+  #add model data to table
+  column_table |>
+    add_row(journal = unique_col[i],
+            num_articles = length(wsj_data_sent_col[[i]]$date),
+            r_square = summary(temp_lm)$r.squared,
+            f_stat = summary(temp_lm)$fstatistic) |>
+    slice(1:i) -> column_table
+  
+  i <- i + 1
+  } else {
+    i <- i + 1
+  }
 }
+
+column_table |>
+  distinct(journal, .keep_all = TRUE) |>
+  filter(r_square > 0) |>
+  arrange(desc(num_articles))
+```
+
+Check to see if only using columns with more than 100 journals published has an affect
+
+```{r}
+column_table |>
+  filter(r_square > 0) |>
+  filter(num_articles >= 100) -> top_100
+
+wsj_data_sent |>
+  filter(column %in% (top_100$journal)) |>
+  #create the compressed day data and then model
 ```
