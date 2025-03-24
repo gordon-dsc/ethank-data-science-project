@@ -307,12 +307,12 @@ column_table |>
   arrange(desc(num_articles))
 ```
 
-Check to see if only using columns with more than 100 journals published has an affect
+Check to see if only using columns with more than 1000 journals published has an affect
 
 ```{r}
 column_table |>
   filter(r_square > 0) |>
-  filter(num_articles >= 1000) -> over_100
+  filter(num_articles >= 1000) -> over_1000
 
 wsj_data_sent |>
   filter(column %in% (over_100$journal)) |>
@@ -330,9 +330,9 @@ wsj_data_sent |>
   over_100
 ```
 
-test model of all columns with at least 100 entries
+test model of all columns with at least 1000 entries
 
 ```{r}
-lm(pe_ratio ~ daily_sent, over_100) |>
+lm(pe_ratio ~ daily_sent, over_1000) |>
   summary()
 ```
