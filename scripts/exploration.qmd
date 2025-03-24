@@ -312,9 +312,27 @@ Check to see if only using columns with more than 100 journals published has an 
 ```{r}
 column_table |>
   filter(r_square > 0) |>
-  filter(num_articles >= 100) -> top_100
+  filter(num_articles >= 1000) -> over_100
 
 wsj_data_sent |>
-  filter(column %in% (top_100$journal)) |>
+  filter(column %in% (over_100$journal)) |>
   #create the compressed day data and then model
+  mutate(date = parse_date_time(date, orders = c("ymd")),
+          month = month(date),
+          year = year(date)) |>
+  group_by(date) |>
+  summarise(daily_sent = mean(sentiment)) |>
+  inner_join(spy_data, by = c("date")) |>
+  inner_join(pe_data, by = c("month", "year")) |>
+  mutate(pe_ratio = price/earnings) |>
+  select(-date.y, -month, - year, -earnings) |>
+  rename(date = date.x) ->
+  over_100
+```
+
+test model of all columns with at least 100 entries
+
+```{r}
+lm(pe_ratio ~ daily_sent, over_100) |>
+  summary()
 ```
