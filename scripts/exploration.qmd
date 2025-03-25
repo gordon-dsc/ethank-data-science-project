@@ -10,6 +10,7 @@ install.packages("tidyverse")
 install.packages("stargazer")
 library(tidyverse)
 library(stargazer)
+library(AER)
 ```
 
 # Import Data
@@ -342,11 +343,19 @@ lm(pe_ratio ~ daily_sent, over_1000) |>
 The model is much better!!
 
 ```{r}
-#save the newer data file with more relevant headlines
-write_csv(over_1000, "../data/cleaned_data/full_data_2.0.csv")
+#save the newer data file with more relevant headlines, arrange so newest date is at top
+over_1000 |>
+  arrange(desc(date)) |>
+write_csv("../data/cleaned_data/full_data_2.0.csv")
+
+over_1000 |>
+  arrange(desc(date)) |>
+write_csv("../output/final_data.csv")
 ```
 
 # Exploration 4
+
+## Linear Model
 
 Using refined headline data build linear model for straight comparison as well as auto regression model for changing in time
 
@@ -354,15 +363,114 @@ Using refined headline data build linear model for straight comparison as well a
 read.csv("../data/cleaned_data/full_data_2.0.csv") -> full_data_2.0
 ```
 
+visualization of relationship between pe_ratio and daily_sent
+
+```{r}
+#relationship between daily sentiment and pe ratio
+full_data_2.0 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+```
+
 Linear model of straight comparison
 
 ```{r}
-lm_model <- lm(pe_ratio ~ daily_sent + change_percent, full_data_2.0)
-summary(lm_model)
+lm_model_1 <- lm(pe_ratio ~ daily_sent, full_data_2.0)
+lm_model_2 <- lm(pe_ratio ~ daily_sent + change_percent, full_data_2.0)
+summary(lm_model_1)
+summary(lm_model_2)
 ```
 
 publishable table
 
 ```{r}
-stargazer(full_data_2.0, type = "text", median = TRUE, digits = 2, title = "SPY daily price, pe ratio, and journal sentiment", out = "../data/cleaned_data/table1.txt")
+stargazer(full_data_2.0, type = "text", median = TRUE, digits = 2, title = "SPY daily price, pe ratio, and journal sentiment", out = "../output/data_summary.txt")
+```
+
+## Auto regression
+
+pe_ratio data is presented as a time series and so utilizing an auto regression to account for the lag may improve the model accuracy, we will first examine lag on daily_sent
+
+Use Bayes information criterion (BIC) to determine how much lag in daily_sent to use
+
+```{r}
+#create funtion to calculate BIC formulat value
+BIC <- function(model) {
+  
+  ssr <- sum(model$residuals^2)
+  t <- length(model$residuals)
+  npar <- length(model$coef)
+  
+  return(
+    round(c("p" = npar - 1,
+          "BIC" = log(ssr/t) + npar * log(t)/t,
+          "Adj.R2" = summary(model)$adj.r.squared), 4)
+  )
+}
+
+#how many different lag lengths to test
+order <- 1:100
+
+#test modles of different lag lengths
+BICs <- sapply(order, function(x) 
+        "AR" = BIC(dynlm(ts(full_data_2.0$pe_ratio) ~ L(ts(full_data_2.0$daily_sent), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs[, which.min(BICs[2, ])]
+```
+
+create model with lag length of 11 (optimal from BIC formula)
+
+```{r}
+ar_model <- lm(pe_ratio ~ daily_sent + 
+                 change_percent +
+                 lag(daily_sent, 2) + 
+                 lag(daily_sent, 3) +
+                 lag(daily_sent, 4) +
+                 lag(daily_sent, 5) +
+                 lag(daily_sent, 6) +
+                 lag(daily_sent, 7) +
+                 lag(daily_sent, 8) +
+                 lag(daily_sent, 9) +
+                 lag(daily_sent, 10) +
+                 lag(daily_sent, 11),
+                 full_data_2.0)
+summary(ar_model)
+```
+
+table comparing models
+
+```{r}
+# gather robust standard errors in a list
+rob_se <- list(sqrt(diag(vcovHC(lm_model_1, type = "HC1"))),
+               sqrt(diag(vcovHC(lm_model_2, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_model, type = "HC1"))))
+
+
+stargazer(lm_model_1, lm_model_2, ar_model,
+          type = "text", 
+          se = rob_se,
+          digits = 3,
+          column.labels = c("(LM 1)", "(LM 2)", "(AR 1)"),
+          dep.var.labels = c("PE Ratio"), 
+          covariate.labels = c("Daily Sentiment", 
+                               "Change Percent", 
+                               "Daily Sentiment Lag 1",
+                               "Daily Sentiment Lag 2",
+                               "Daily Sentiment Lag 3",
+                               "Daily Sentiment Lag 4",
+                               "Daily Sentiment Lag 5",
+                               "Daily Sentiment Lag 6",
+                               "Daily Sentiment Lag 7",
+                               "Daily Sentiment Lag 8",
+                               "Daily Sentiment Lag 9",
+                               "Daily Sentiment Lag 10",
+                               "Daily Sentiment Lag 11"), 
+          out = "../output/models_summary.txt")
 ```
