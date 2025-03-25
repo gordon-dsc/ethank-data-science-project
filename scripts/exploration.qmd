@@ -7,7 +7,9 @@ format: html
 
 ```{r packages}
 install.packages("tidyverse")
+install.packages("stargazer")
 library(tidyverse)
+library(stargazer)
 ```
 
 # Import Data
@@ -315,7 +317,7 @@ column_table |>
   filter(num_articles >= 1000) -> over_1000
 
 wsj_data_sent |>
-  filter(column %in% (over_100$journal)) |>
+  filter(column %in% (over_1000$journal)) |>
   #create the compressed day data and then model
   mutate(date = parse_date_time(date, orders = c("ymd")),
           month = month(date),
@@ -327,7 +329,7 @@ wsj_data_sent |>
   mutate(pe_ratio = price/earnings) |>
   select(-date.y, -month, - year, -earnings) |>
   rename(date = date.x) ->
-  over_100
+  over_1000
 ```
 
 test model of all columns with at least 1000 entries
@@ -335,4 +337,32 @@ test model of all columns with at least 1000 entries
 ```{r}
 lm(pe_ratio ~ daily_sent, over_1000) |>
   summary()
+```
+
+The model is much better!!
+
+```{r}
+#save the newer data file with more relevant headlines
+write_csv(over_1000, "../data/cleaned_data/full_data_2.0.csv")
+```
+
+# Exploration 4
+
+Using refined headline data build linear model for straight comparison as well as auto regression model for changing in time
+
+```{r}
+read.csv("../data/cleaned_data/full_data_2.0.csv") -> full_data_2.0
+```
+
+Linear model of straight comparison
+
+```{r}
+lm_model <- lm(pe_ratio ~ daily_sent + change_percent, full_data_2.0)
+summary(lm_model)
+```
+
+publishable table
+
+```{r}
+stargazer(full_data_2.0, type = "text", median = TRUE, digits = 2, title = "SPY daily price, pe ratio, and journal sentiment", out = "../data/cleaned_data/table1.txt")
 ```
