@@ -11,6 +11,7 @@ install.packages("stargazer")
 library(tidyverse)
 library(stargazer)
 library(AER)
+library(dynlm)
 ```
 
 # Import Data
