@@ -225,7 +225,7 @@ while(k <= length(unique_col)){
   
   #change date object to date time
   temp |>
-    mutate(date = parse_date_time(date, orders = "ymd")) ->
+    mutate(date = parse_datetime(date)) ->
     temp
   
   list(temp) -> wsj_data_sent_col[k]
@@ -273,7 +273,7 @@ while(i <=  length(wsj_data_sent_col)){
 }
 ```
 
-# Journal Comparison
+## Journal Comparison
 
 Run through journal columns to see which have strongest relationship with pe_ratio
 

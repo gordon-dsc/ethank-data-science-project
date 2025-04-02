@@ -251,9 +251,9 @@ while(k <= length(unique_col)){
     temp
   
   #change date object to date time
-  #temp |>
-    #mutate(date = parse_date_time(date, orders = "ymd")) ->
-    #temp
+  temp |>
+    mutate(date = parse_datetime(date)) ->
+    temp
   
   list(temp) -> wsj_data_sent_col[k]
   k<- k + 1
@@ -283,7 +283,7 @@ while(i <=  length(wsj_data_sent_col)){
 }
 ```
 
-# Journal Comparison
+## Journal Comparison
 
 Run through journal columns to see which have strongest relationship with pe_ratio
 
@@ -646,11 +646,21 @@ BICs[, which.min(BICs[2, ])]
 create model with lag length of 11 (optimal from BIC formula) for normal data and lag length x for top 10 data
 
 ```{r}
-ar_model <- lm(pe_ratio ~ daily_sent + 
+#ar model with lag 3 on top 2,500
+ar_model_1 <- lm(pe_ratio ~ daily_sent + 
                  change_percent +
-                 lag(daily_sent, 2)
+                 lag(daily_sent, 2) +
+                 lag(daily_sent, 3),
                  full_data_over_2500)
-summary(ar_model)
+summary(ar_model_1)
+
+#ar model with lag 3 on top 10
+ar_model_2 <- lm(pe_ratio ~ daily_sent + 
+                 change_percent +
+                 lag(daily_sent, 2) +
+                 lag(daily_sent, 3),
+                 full_data_top_10)
+summary(ar_model_2)
 ```
 
 table comparing models
@@ -659,27 +669,20 @@ table comparing models
 # gather robust standard errors in a list
 rob_se <- list(sqrt(diag(vcovHC(lm_model_1, type = "HC1"))),
                sqrt(diag(vcovHC(lm_model_2, type = "HC1"))),
-               sqrt(diag(vcovHC(ar_model, type = "HC1"))))
+               sqrt(diag(vcovHC(lm_model_4, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_model_1, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_model_2, type = "HC1"))))
 
 
-stargazer(lm_model_1, lm_model_2, ar_model,
+stargazer(lm_model_1, lm_model_2, lm_model_4, ar_model_1, ar_model_2,
           type = "text", 
           se = rob_se,
           digits = 3,
-          column.labels = c("(LM 1)", "(LM 2)", "(AR 1)"),
+          column.labels = c("(LM 1)", "(LM 2)", "(LM 4)","(AR 1)", "(AR 2)"),
           dep.var.labels = c("PE Ratio"), 
           covariate.labels = c("Daily Sentiment", 
                                "Change Percent", 
                                "Daily Sentiment Lag 1",
-                               "Daily Sentiment Lag 2",
-                               "Daily Sentiment Lag 3",
-                               "Daily Sentiment Lag 4",
-                               "Daily Sentiment Lag 5",
-                               "Daily Sentiment Lag 6",
-                               "Daily Sentiment Lag 7",
-                               "Daily Sentiment Lag 8",
-                               "Daily Sentiment Lag 9",
-                               "Daily Sentiment Lag 10",
-                               "Daily Sentiment Lag 11"), 
-          out = "../output/models_summary.txt")
+                               "Daily Sentiment Lag 2"), 
+          out = "../output/models_summary_2.0.txt")
 ```
