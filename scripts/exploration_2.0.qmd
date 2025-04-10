@@ -32,6 +32,14 @@ full_data |>
 #get wsj data before daily compilation
 read.csv("../data/cleaned_data/wsj_data_sent.csv") -> wsj_data_sent
 
+#for some reason the date column imports as character, change back to date time
+wsj_data_sent |>
+    mutate(date = parse_date_time(str_extract(
+    wsj_data_sent$date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> 
+    wsj_data_sent
+
 #import PE data
 read.csv("../data/cleaned_data/pe_data.csv") -> pe_data
 
@@ -477,7 +485,7 @@ write_csv("../output/final_data_over_2500_per_journal_column.csv")
 
 ### Top 10 Journal Columns
 
-Check to see if only using top 10 journal columns
+Check to see if only using top 10 journal columns\
 
 ```{r}
 wsj_data_sent |>
