@@ -1,0 +1,822 @@
+---
+title: "exploration_2.0"
+format: html
+---
+
+---
+title: "Data Analysis Script"
+format: html
+---
+
+# Libraries and Packages
+
+```{r packages}
+install.packages("tidyverse")
+install.packages("stargazer")
+library(tidyverse)
+library(stargazer)
+library(AER)
+library(dynlm)
+```
+
+# Import Data
+
+```{r}
+read.csv("../data/cleaned_data/full_data.csv") -> full_data
+
+#add change in pe_ratio column
+full_data |>
+  mutate(change_pe = pe_ratio - lead(pe_ratio)) ->
+  full_data
+
+#get wsj data before daily compilation
+read.csv("../data/cleaned_data/wsj_data_sent.csv") -> wsj_data_sent
+
+#for some reason the date column imports as character, change back to date time
+wsj_data_sent |>
+    mutate(date = parse_date_time(str_extract(
+    wsj_data_sent$date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> 
+    wsj_data_sent
+
+#import PE data
+read.csv("../data/cleaned_data/pe_data.csv") -> pe_data
+
+#import SPY data with some small modifications for easier join
+read_csv("../data/imported_data/spy_data.csv") |>
+    mutate(change_percent = parse_number(change_percent)/100,
+           date = parse_date_time(date, orders = "mdy"),
+           month = month(date),
+           year = year(date))->
+  spy_data
+```
+
+# Exploration 1
+
+Heat map of correlations between variables
+
+```{r}
+full_data |>
+  select(2:9)|>
+  cor() |>
+  reshape2::melt() |>
+    ggplot(aes(x = Var1, y = Var2, fill = value)) +
+     geom_tile()
+```
+
+Model addressing original question, daily sentiment vs valuations (PE ratio)
+
+```{r}
+#relationship between daily sentiment and pe ratio itself
+full_data |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#relationship between daily sentiment and change in pe ratio
+full_data |>
+  ggplot(mapping = aes(x = daily_sent, y = change_pe)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs Change in PE Ratio",
+       x = "Daily Sentiment",
+       y= "Change in PE Ratio") +
+  theme_minimal()
+
+#distribution of observations over time
+wsj_data_sent |>
+  group_by(date) |>
+  summarize(count = n()) |>
+  ggplot(mapping = aes(x = date, y = count, color = weekdays(date))) +
+  geom_point() +  
+  labs(title = "Date vs Number of Articles",
+       x = "Date",
+       y= "Number of Articles") +
+  theme_minimal()
+
+
+
+#fit linear model to check for statistical significance 
+lm(pe_ratio ~ daily_sent, full_data) -> lm_ep_1
+summary(lm_ep_1)
+
+lm(change_pe ~ daily_sent, full_data) -> lm_ep_1.5
+```
+
+Relationship between daily_sent and pe_ratio is statically significant but does not explain much of the variation in valuations
+
+# Exploration 2
+
+This exploration seeks to determine if there are ways to reduce to raw data to selected news that is either more relevant, regularly published and viewed, or specific to financial markets
+
+## Comparison of sentiment by Journal Column
+
+### Create list of data frames by column
+
+Utilizing original wsj_data, create a list that contains a data table for each unique journal column under which and article was published
+
+```{r}
+#how many different columns are there = 2013
+unique(wsj_data_sent$column) -> unique_col
+length(unique_col)
+
+#make list of data set filtered by unique col
+wsj_data_sent_col <- vector("list", length(unique_col))
+k <- 1
+while(k <= length(unique_col)){
+  wsj_data_sent |>
+    filter(column ==  unique_col[k]) ->
+    temp
+  
+  #change date object to date time
+  temp |>
+    mutate(date = parse_datetime(date)) ->
+    temp
+  
+  list(temp) -> wsj_data_sent_col[k]
+  k<- k + 1
+}
+```
+
+### Create daily sentiment data by columns
+
+Using the new list of data frames containing the unique columns create daily sentiment variable for articles published
+
+```{r}
+#for every unique column get the daily sentiment of articles published
+i <- 1
+while(i <=  length(wsj_data_sent_col)){
+  wsj_data_sent_col[[i]] |>
+      group_by(date) |>
+      summarise(daily_sent = mean(sentiment)) |>
+      select(date, daily_sent) |>
+      inner_join(spy_data, by = c("date")) |>
+      inner_join(pe_data, by = c("month", "year")) |>
+      mutate(pe_ratio = price/earnings) |>
+      select(-date.y, -month, - year, -earnings) |>
+      rename(date = date.x) -> temp
+  
+  list(temp) -> wsj_data_sent_col[i]
+  i <- i + 1
+}
+```
+
+### Journal Comparison
+
+Run through journal columns to see which have strongest relationship with pe_ratio
+
+```{r}
+#this will run through all journal columns and create list of journal, num_article, R^2, F-stat
+i <- 1
+column_table <- tibble(journal = character(),
+                       num_articles = numeric(),
+                       r_square = numeric(),
+                       f_stat = numeric())
+
+
+while(i <= length(wsj_data_sent_col)) {
+  #check to see if any articles exist
+  if(length(wsj_data_sent_col[[i]]$date) > 0){ 
+  temp_lm <- lm(pe_ratio ~ daily_sent, wsj_data_sent_col[[i]])
+  
+  #add model data to table
+  column_table |>
+    add_row(journal = unique_col[i],
+            num_articles = length(wsj_data_sent_col[[i]]$date),
+            r_square = summary(temp_lm)$r.squared,
+            f_stat = summary(temp_lm)$fstatistic) |>
+    slice(1:i) -> column_table
+  
+  i <- i + 1
+  } else {
+    i <- i + 1
+  }
+}
+
+```
+
+## Number of articles filter
+
+Now we will examine which columns to select by exploring the number of articles they contain over the ten year time period. The hypothesis is that by removing journal columns that were not as regularly published the core stream of news will be left to analyze.
+
+```{r}
+#over 1000 articles published over the ten year period
+wsj_data_sent |>
+  group_by(column) |>
+  summarize(count = n()) |>
+  arrange(desc(count)) |>
+  filter(count >= 1000) ->
+  freq_wsj_data_sent
+
+#over 2500 articles published over the ten year period
+wsj_data_sent |>
+  group_by(column) |>
+  summarize(count = n()) |>
+  arrange(desc(count)) |>
+  filter(count >= 2500) ->
+  freq_wsj_data_sent_2500
+
+#top 10 journal columns by number of articles publsihed 
+wsj_data_sent |>
+  group_by(column) |>
+  summarize(count = n()) |>
+  arrange(desc(count)) |>
+  head(n = 10) ->
+  freq_wsj_data_sent_top_10
+```
+
+### Over 1000 articles published 
+
+Check to see if only using columns with more than 1000 journals published has an affect
+
+```{r}
+#create full data set with sentiment by day filtering for journal columns with at least 1000 articles published
+wsj_data_sent |>
+  filter(column %in% (freq_wsj_data_sent$column)) |>
+  #create the compressed day data and then model
+  mutate(date = parse_date_time(date, orders = c("ymd")),
+          month = month(date),
+          year = year(date)) |>
+  group_by(date) |>
+  summarise(daily_sent = mean(sentiment)) |>
+  inner_join(spy_data, by = c("date")) |>
+  inner_join(pe_data, by = c("month", "year")) |>
+  mutate(pe_ratio = price/earnings) |>
+  select(-date.y, -month, - year, -earnings) |>
+  rename(date = date.x) ->
+  over_1000
+```
+
+test model of all columns with at least 1000 entries
+
+```{r}
+#check linear model on selected data
+lm(pe_ratio ~ daily_sent, over_1000) |>
+  summary()
+
+#general model of PE vs daily_sent
+over_1000 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio (over 1,000 articles)",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#distribution of observations over time
+wsj_data_sent |>
+  filter(column %in% (freq_wsj_data_sent$column)) |>
+  group_by(date) |>
+  summarize(count = n()) |>
+  ggplot(mapping = aes(x = date, y = count, color = weekdays(date))) +
+  geom_point() +  
+  labs(title = "Date vs Number of Articles (over 1,000 articles)",
+       x = "Date",
+       y= "Number of Articles") +
+  theme_minimal()
+```
+
+The model is much better!!
+
+```{r}
+#save the newer data file with more relevant headlines, arrange so newest date is at top
+over_1000 |>
+  arrange(desc(date)) |>
+write_csv("../data/cleaned_data/full_data_over_1000_per_journal_column.csv")
+
+over_1000 |>
+  arrange(desc(date)) |>
+write_csv("../output/final_data_over_1000_per_journal_column.csv")
+```
+
+### Over 2,500 articles published
+
+Check to see if only using columns with more than 2,500 journals published has an affect
+
+```{r}
+#create full data set with sentiment by day filtering for journal columns with at least 2500 articles published
+wsj_data_sent |>
+  filter(column %in% (freq_wsj_data_sent_2500$column)) |>
+  #create the compressed day data and then model
+  mutate(date = parse_date_time(date, orders = c("ymd")),
+          month = month(date),
+          year = year(date)) |>
+  group_by(date) |>
+  summarise(daily_sent = mean(sentiment)) |>
+  inner_join(spy_data, by = c("date")) |>
+  inner_join(pe_data, by = c("month", "year")) |>
+  mutate(pe_ratio = price/earnings) |>
+  select(-date.y, -month, - year, -earnings) |>
+  rename(date = date.x) ->
+  over_2500
+```
+
+test model of all columns with at least 2500 entries
+
+```{r}
+#check linear model on selected data
+lm(pe_ratio ~ daily_sent, over_2500) |>
+  summary()
+
+#general model of PE vs daily_sent
+over_2500 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio (over 2,500 articles)",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#distribution of observations over time
+wsj_data_sent |>
+  filter(column %in% (freq_wsj_data_sent_2500$column)) |>
+  group_by(date) |>
+  summarize(count = n()) |>
+  ggplot(mapping = aes(x = date, y = count, color = weekdays(date))) +
+  geom_point() +  
+  labs(title = "Date vs Number of Articles (over 2,500 articles)",
+       x = "Date",
+       y= "Number of Articles") +
+  theme_minimal()
+```
+
+The model improves again
+
+```{r}
+#save the newer data file with more relevant headlines, arrange so newest date is at top
+over_2500 |>
+  arrange(desc(date)) |>
+write_csv("../data/cleaned_data/full_data_over_2500_per_journal_column.csv")
+
+over_2500 |>
+  arrange(desc(date)) |>
+write_csv("../output/final_data_over_2500_per_journal_column.csv")
+```
+
+### Top 10 Journal Columns
+
+Check to see if only using top 10 journal columns has an affect on model improvement
+
+```{r}
+#create full data set with sentiment by day filtering for only the top ten journal articles
+wsj_data_sent |>
+  filter(column %in% (freq_wsj_data_sent_top_10$column)) |>
+  #create the compressed day data and then model
+  mutate(date = parse_date_time(date, orders = c("ymd")),
+          month = month(date),
+          year = year(date)) |>
+  group_by(date) |>
+  summarise(daily_sent = mean(sentiment)) |>
+  inner_join(spy_data, by = c("date")) |>
+  inner_join(pe_data, by = c("month", "year")) |>
+  mutate(pe_ratio = price/earnings) |>
+  select(-date.y, -month, - year, -earnings) |>
+  rename(date = date.x) ->
+  top_10
+```
+
+test model of top 10 columns
+
+```{r}
+#check linear model on selected data
+lm(pe_ratio ~ daily_sent, top_10) |>
+  summary()
+
+#general model of PE vs daily_sent
+top_10 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio (Top 10 Journal Columns)",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#distribution of observations over time
+wsj_data_sent |>
+  filter(column %in% (freq_wsj_data_sent_top_10$column)) |>
+  group_by(date) |>
+  summarize(count = n()) |>
+  ggplot(mapping = aes(x = date, y = count, color = weekdays(date))) +
+  geom_point() +  
+  labs(title = "Date vs Number of Articles (Top 10 Journal Columns)",
+       x = "Date",
+       y= "Number of Articles") +
+  theme_minimal()
+```
+
+The model is much better!!
+
+```{r}
+#save the newer data file with more relevant headlines, arrange so newest date is at top
+top_10 |>
+  arrange(desc(date)) |>
+write_csv("../data/cleaned_data/full_data_top_10_journal_column.csv")
+
+over_2500 |>
+  arrange(desc(date)) |>
+write_csv("../output/final_data_top_10_journal_column.csv")
+```
+
+# Exploration 3
+
+## Linear Model
+
+Using refined headline data build linear model for straight comparison as well as auto regression model for changing in time
+
+Only run the following chunk if previous data was
+
+```{r}
+#data from reduced journal columns publishing more than 2,500 articles
+read.csv("../data/cleaned_data/full_data_over_1000_per_journal_column.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> full_data_over_1000
+
+#data from reduced journal columns publishing more than 2,500 articles
+read.csv("../data/cleaned_data/full_data_over_2500_per_journal_column.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd"))-> full_data_over_2500
+
+#data from top ten journal column sources
+read.csv("../data/cleaned_data/full_data_top_10_journal_column.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd"))-> full_data_top_10
+
+```
+
+visualization of relationship between pe_ratio and daily_sent
+
+```{r}
+#relationship between daily sentiment and pe ratio over 1,000
+full_data_over_1000 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio (over 1000 articles)",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#relationship between daily sentiment and pe ratio over 2,500
+full_data_over_2500 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio (over 2,500 articles)",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#relationship between daily sentiment and pe ratio top 10 columns
+full_data_top_10 |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio (Top 10 Journal Columns)",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+```
+
+Linear model of straight comparison
+
+```{r}
+#normal data (over 1,000 articles)
+lm_model_1 <- lm(pe_ratio ~ daily_sent, full_data_over_1000)
+lm_model_2 <- lm(pe_ratio ~ daily_sent + change_percent, full_data_over_1000)
+summary(lm_model_1)
+summary(lm_model_2)
+
+
+#normal data (over 2,500 articles)
+lm_model_3 <- lm(pe_ratio ~ daily_sent, full_data_over_2500)
+lm_model_4 <- lm(pe_ratio ~ daily_sent + change_percent, full_data_over_2500)
+summary(lm_model_3)
+summary(lm_model_4)
+
+#top 10 artivles
+lm_model_5 <- lm(pe_ratio ~ daily_sent, full_data_top_10)
+lm_model_6 <- lm(pe_ratio ~ daily_sent + change_percent, full_data_top_10)
+summary(lm_model_5)
+summary(lm_model_6)
+```
+
+publishable table
+
+```{r}
+#over 1000 articles
+stargazer(full_data_over_1000, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment", out = "../output/data_summary_over_1000.txt")
+
+#over 2000 articles
+stargazer(full_data_over_2500, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment", out = "../output/data_summary_over_2500.txt")
+
+#top ten holdings
+stargazer(full_data_over_2500, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment (Top 10 Journal Columns)", out = "../output/data_summary_top_10.txt")
+```
+
+## Auto regression of Dependant
+
+pe_ratio data is presented as a time series and so utilizing an auto regression to account for the lag may improve the model accuracy, we will first examine lag on daily_sent
+
+Use Bayes information criterion (BIC) to determine how much lag in daily_sent to use
+
+```{r}
+#create funtion to calculate BIC formulat value
+BIC <- function(model) {
+  
+  ssr <- sum(model$residuals^2)
+  t <- length(model$residuals)
+  npar <- length(model$coef)
+  
+  return(
+    round(c("p" = npar - 1,
+          "BIC" = log(ssr/t) + npar * log(t)/t,
+          "Adj.R2" = summary(model)$adj.r.squared), 4)
+  )
+}
+
+#how many different lag lengths to test
+order <- 1:100
+
+#test models of different lage lengths for over 1000 artivles
+BICs <- sapply(order, function(x) 
+        "AR" = BIC(dynlm(ts(full_data_over_1000$pe_ratio) ~ L(ts(full_data_over_2500$daily_sent) + L(ts(full_data_over_2500$change_percent)), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs[, which.min(BICs[2, ])]
+
+#test models of different lage lengths for over 2500 artivles 
+BICs_over_2500 <- sapply(order, function(x) 
+        "AR" = BIC(dynlm(ts(full_data_over_2500$pe_ratio) ~ L(ts(full_data_over_2500$daily_sent) + L(ts(full_data_over_2500$change_percent)), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs_over_2500[, which.min(BICs[2, ])]
+
+
+#test modles of different lag lengths for top 10 journal columns
+BICs_top_10 <- sapply(order, function(x) 
+        "AR" = BIC(dynlm(ts(full_data_top_10$pe_ratio) ~ L(ts(full_data_top_10$daily_sent), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs_top_10[, which.min(BICs[2, ])]
+```
+
+create model with lag length of3 (optimal from BIC formula) for all data sets
+
+```{r}
+#ar model with lag 3 on top 1000
+ar_model_1 <- lm(pe_ratio ~ daily_sent + 
+                 change_percent +
+                 lag(daily_sent, 2) +
+                 lag(daily_sent, 3),
+                 full_data_over_1000)
+summary(ar_model_1)
+
+#ar model with lag 3 on top 2500
+ar_model_2 <- lm(pe_ratio ~ daily_sent + 
+                 change_percent +
+                 lag(daily_sent, 2) +
+                 lag(daily_sent, 3),
+                 full_data_over_2500)
+summary(ar_model_2)
+
+
+#ar model with lag 3 on top 10
+ar_model_3 <- lm(pe_ratio ~ daily_sent + 
+                 change_percent +
+                 lag(daily_sent, 2) +
+                 lag(daily_sent, 3),
+                 full_data_top_10)
+summary(ar_model_3)
+```
+
+table comparing models
+
+```{r}
+# gather robust standard errors in a list, one for linear, one for autoregression
+rob_se_lm <- list(sqrt(diag(vcovHC(lm_model_2, type = "HC1"))),
+               sqrt(diag(vcovHC(lm_model_4, type = "HC1"))),
+               sqrt(diag(vcovHC(lm_model_6, type = "HC1"))))
+
+rob_se_ar <- list(sqrt(diag(vcovHC(ar_model_1, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_model_2, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_model_3, type = "HC1"))))
+
+#create publishing tables of linear and auto regression models
+stargazer(lm_model_2, lm_model_4, lm_model_6,
+          type = "text", 
+          se = rob_se_lm,
+          digits = 3,
+          column.labels = c("(LM 2)", "(LM 4)", "(LM 6)"),
+          dep.var.labels = c("PE Ratio"), 
+          covariate.labels = c("Daily Sentiment", 
+                               "Change Percent"), 
+          out = "../output/models_summary_2.0_linear.txt")
+
+
+stargazer(ar_model_1, ar_model_2, ar_model_3,
+          type = "text", 
+          se = rob_se_lm,
+          digits = 3,
+          column.labels = c("(AR 1)", "(AR 2)", "(AR 3)"),
+          dep.var.labels = c("PE Ratio"), 
+          covariate.labels = c("Daily Sentiment", 
+                               "Change Percent", 
+                               "Daily Sentiment Lag 1",
+                               "Daily Sentiment Lag 2"), 
+          out = "../output/models_summary_2.0_autoregression.txt")
+```
+
+# Exploration 4
+
+For this exploration we will modify the response variable, PE ratio, to be the residual response from a moving average. This will better capture the short term affects changes in news sentiment have on the market valuations
+
+Data import, run only needed if previous chunks have not been completed
+
+```{r}
+#full wsj data
+read.csv("../data/cleaned_data/full_data.csv") |>
+  mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> full_data
+
+#data from reduced journal columns publishing more than 2,500 articles
+read.csv("../data/cleaned_data/full_data_over_1000_per_journal_column.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> full_data_over_1000
+
+#data from reduced journal columns publishing more than 2,500 articles
+read.csv("../data/cleaned_data/full_data_over_2500_per_journal_column.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd"))-> full_data_over_2500
+
+#data from top ten journal column sources
+read.csv("../data/cleaned_data/full_data_top_10_journal_column.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd"))-> full_data_top_10
+
+```
+
+## Create PE residuals
+
+To create the PE ratio residuals to better look at short term fluctuations we will test weekly and monthly MA to see what is the best balance of accurate trend and minimal residuals
+
+Create weekly MA
+
+```{r}
+#add weekly MA to full data
+full_data |>
+  mutate(weekly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) ->
+  full_data
+
+#add weekly MA to full data over 1000 articles
+full_data_over_1000 |>
+  mutate(weekly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) ->
+  full_data_over_1000
+
+#add weekly MA to full data over 2,500 articles
+full_data_over_2500 |>
+  mutate(weekly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) ->
+  full_data_over_2500
+
+#add weekly MA to full data from top ten journal columns
+full_data_top_10 |>
+  mutate(weekly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) ->
+  full_data_top_10
+```
+
+Create monthly MA
+
+```{r}
+#add monthly MA to full data
+full_data |>
+  mutate(monthly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) ->
+  full_data
+
+#add monthly MA to full data over 1,000 artilces
+full_data_over_1000 |>
+  mutate(monthly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) ->
+  full_data_over_1000
+
+#add monthly MA to full data over 2,500 articles
+full_data_over_2500 |>
+  mutate(monthly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) ->
+  full_data_over_2500
+
+#add monthly MA to full data from top ten journal columns
+full_data_top_10 |>
+  mutate(monthly_ma = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) ->
+  full_data_top_10
+```
