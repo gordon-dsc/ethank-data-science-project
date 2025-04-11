@@ -230,7 +230,7 @@ wsj_data_sent |>
   freq_wsj_data_sent_top_10
 ```
 
-### Over 1000 articles published 
+### Over 1000 articles published
 
 Check to see if only using columns with more than 1000 journals published has an affect
 
@@ -553,10 +553,17 @@ order <- 1:100
 
 #test models of different lage lengths for over 1000 artivles
 BICs <- sapply(order, function(x) 
-        "AR" = BIC(dynlm(ts(full_data_over_1000$pe_ratio) ~ L(ts(full_data_over_2500$daily_sent) + L(ts(full_data_over_2500$change_percent)), 1:x))))
+        "AR" = BIC(dynlm(ts(full_data$pe_ratio) ~ L(ts(full_data$daily_sent) + L(ts(full_data$change_percent)), 1:x))))
 
 #select the minimized lag length - most optimal from BIC formula
 BICs[, which.min(BICs[2, ])]
+
+#test models of different lage lengths for over 1000 artivles
+BICs_over_1000 <- sapply(order, function(x) 
+        "AR" = BIC(dynlm(ts(full_data_over_1000$pe_ratio) ~ L(ts(full_data_over_1000$daily_sent) + L(ts(full_data_over_1000$change_percent)), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs_over_1000[, which.min(BICs[2, ])]
 
 #test models of different lage lengths for over 2500 artivles 
 BICs_over_2500 <- sapply(order, function(x) 
@@ -574,22 +581,22 @@ BICs_top_10 <- sapply(order, function(x)
 BICs_top_10[, which.min(BICs[2, ])]
 ```
 
-create model with lag length of3 (optimal from BIC formula) for all data sets
+create model with lag length of 3 (optimal from BIC formula) for all data sets
 
 ```{r}
 #ar model with lag 3 on top 1000
 ar_model_1 <- lm(pe_ratio ~ daily_sent + 
                  change_percent +
-                 lag(daily_sent, 2) +
-                 lag(daily_sent, 3),
+                 lead(daily_sent, 2) +
+                 lead(daily_sent, 3),
                  full_data_over_1000)
 summary(ar_model_1)
 
 #ar model with lag 3 on top 2500
 ar_model_2 <- lm(pe_ratio ~ daily_sent + 
                  change_percent +
-                 lag(daily_sent, 2) +
-                 lag(daily_sent, 3),
+                 lead(daily_sent, 2) +
+                 lead(daily_sent, 3),
                  full_data_over_2500)
 summary(ar_model_2)
 
@@ -597,8 +604,8 @@ summary(ar_model_2)
 #ar model with lag 3 on top 10
 ar_model_3 <- lm(pe_ratio ~ daily_sent + 
                  change_percent +
-                 lag(daily_sent, 2) +
-                 lag(daily_sent, 3),
+                 lead(daily_sent, 2) +
+                 lead(daily_sent, 3),
                  full_data_top_10)
 summary(ar_model_3)
 ```
@@ -681,43 +688,47 @@ read.csv("../data/cleaned_data/full_data_top_10_journal_column.csv") |>
 
 To create the PE ratio residuals to better look at short term fluctuations we will test weekly and monthly MA to see what is the best balance of accurate trend and minimal residuals
 
-Create weekly MA
+Create weekly MA and residual
 
 ```{r}
 #add weekly MA to full data
 full_data |>
-  mutate(weekly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5)) / 5) ->
+  mutate(weekly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5)) / 5) |>
+  mutate(weekly_ma_res = pe_ratio - weekly_ma) ->
   full_data
 
 #add weekly MA to full data over 1000 articles
 full_data_over_1000 |>
-  mutate(weekly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5)) / 5) ->
+  mutate(weekly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5)) / 5) |>
+  mutate(weekly_ma_res = pe_ratio - weekly_ma) ->
   full_data_over_1000
 
 #add weekly MA to full data over 2,500 articles
 full_data_over_2500 |>
-  mutate(weekly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5)) / 5) ->
+  mutate(weekly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5)) / 5) |>
+  mutate(weekly_ma_res = pe_ratio - weekly_ma) ->
   full_data_over_2500
 
 #add weekly MA to full data from top ten journal columns
 full_data_top_10 |>
-  mutate(weekly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5)) / 5) ->
+  mutate(weekly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5)) / 5) |>
+  mutate(weekly_ma_res = pe_ratio - weekly_ma) ->
   full_data_top_10
 ```
 
@@ -726,79 +737,273 @@ Create monthly MA
 ```{r}
 #add monthly MA to full data
 full_data |>
-  mutate(monthly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5) +
-                        lead(daily_sent, 6) +
-                        lead(daily_sent, 7) +
-                        lead(daily_sent, 8) +
-                        lead(daily_sent, 9) +
-                        lead(daily_sent, 10) +
-                        lead(daily_sent, 11) +
-                        lead(daily_sent, 12) +
-                        lead(daily_sent, 13) +
-                        lead(daily_sent, 14) +
-                        lead(daily_sent, 15) +
-                        lead(daily_sent, 16) +
-                        lead(daily_sent, 17) +
-                        lead(daily_sent, 18) +
-                        lead(daily_sent, 19) +
-                        lead(daily_sent, 20)) / 20) ->
+  mutate(monthly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5) +
+                        lead(pe_ratio, 6) +
+                        lead(pe_ratio, 7) +
+                        lead(pe_ratio, 8) +
+                        lead(pe_ratio, 9) +
+                        lead(pe_ratio, 10) +
+                        lead(pe_ratio, 11) +
+                        lead(pe_ratio, 12) +
+                        lead(pe_ratio, 13) +
+                        lead(pe_ratio, 14) +
+                        lead(pe_ratio, 15) +
+                        lead(pe_ratio, 16) +
+                        lead(pe_ratio, 17) +
+                        lead(pe_ratio, 18) +
+                        lead(pe_ratio, 19) +
+                        lead(pe_ratio, 20)) / 20) |>
+  mutate(monthly_ma_res = pe_ratio - monthly_ma) ->
   full_data
 
 #add monthly MA to full data over 1,000 artilces
 full_data_over_1000 |>
-  mutate(monthly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5) +
-                        lead(daily_sent, 6) +
-                        lead(daily_sent, 7) +
-                        lead(daily_sent, 8) +
-                        lead(daily_sent, 9) +
-                        lead(daily_sent, 10) +
-                        lead(daily_sent, 11) +
-                        lead(daily_sent, 12) +
-                        lead(daily_sent, 13) +
-                        lead(daily_sent, 14) +
-                        lead(daily_sent, 15) +
-                        lead(daily_sent, 16) +
-                        lead(daily_sent, 17) +
-                        lead(daily_sent, 18) +
-                        lead(daily_sent, 19) +
-                        lead(daily_sent, 20)) / 20) ->
+  mutate(monthly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5) +
+                        lead(pe_ratio, 6) +
+                        lead(pe_ratio, 7) +
+                        lead(pe_ratio, 8) +
+                        lead(pe_ratio, 9) +
+                        lead(pe_ratio, 10) +
+                        lead(pe_ratio, 11) +
+                        lead(pe_ratio, 12) +
+                        lead(pe_ratio, 13) +
+                        lead(pe_ratio, 14) +
+                        lead(pe_ratio, 15) +
+                        lead(pe_ratio, 16) +
+                        lead(pe_ratio, 17) +
+                        lead(pe_ratio, 18) +
+                        lead(pe_ratio, 19) +
+                        lead(pe_ratio, 20)) / 20) |>
+  mutate(monthly_ma_res = pe_ratio - monthly_ma) ->
   full_data_over_1000
 
 #add monthly MA to full data over 2,500 articles
 full_data_over_2500 |>
-  mutate(monthly_ma = (lead(daily_sent, 1) +
-                        lead(daily_sent, 2) +
-                        lead(daily_sent, 3) +
-                        lead(daily_sent, 4) +
-                        lead(daily_sent, 5) +
-                        lead(daily_sent, 6) +
-                        lead(daily_sent, 7) +
-                        lead(daily_sent, 8) +
-                        lead(daily_sent, 9) +
-                        lead(daily_sent, 10) +
-                        lead(daily_sent, 11) +
-                        lead(daily_sent, 12) +
-                        lead(daily_sent, 13) +
-                        lead(daily_sent, 14) +
-                        lead(daily_sent, 15) +
-                        lead(daily_sent, 16) +
-                        lead(daily_sent, 17) +
-                        lead(daily_sent, 18) +
-                        lead(daily_sent, 19) +
-                        lead(daily_sent, 20)) / 20) ->
+  mutate(monthly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5) +
+                        lead(pe_ratio, 6) +
+                        lead(pe_ratio, 7) +
+                        lead(pe_ratio, 8) +
+                        lead(pe_ratio, 9) +
+                        lead(pe_ratio, 10) +
+                        lead(pe_ratio, 11) +
+                        lead(pe_ratio, 12) +
+                        lead(pe_ratio, 13) +
+                        lead(pe_ratio, 14) +
+                        lead(pe_ratio, 15) +
+                        lead(pe_ratio, 16) +
+                        lead(pe_ratio, 17) +
+                        lead(pe_ratio, 18) +
+                        lead(pe_ratio, 19) +
+                        lead(pe_ratio, 20)) / 20) |>
+  mutate(monthly_ma_res = pe_ratio - monthly_ma) ->
   full_data_over_2500
 
 #add monthly MA to full data from top ten journal columns
 full_data_top_10 |>
-  mutate(monthly_ma = (lead(daily_sent, 1) +
+  mutate(monthly_ma = (lead(pe_ratio, 1) +
+                        lead(pe_ratio, 2) +
+                        lead(pe_ratio, 3) +
+                        lead(pe_ratio, 4) +
+                        lead(pe_ratio, 5) +
+                        lead(pe_ratio, 6) +
+                        lead(pe_ratio, 7) +
+                        lead(pe_ratio, 8) +
+                        lead(pe_ratio, 9) +
+                        lead(pe_ratio, 10) +
+                        lead(pe_ratio, 11) +
+                        lead(pe_ratio, 12) +
+                        lead(pe_ratio, 13) +
+                        lead(pe_ratio, 14) +
+                        lead(pe_ratio, 15) +
+                        lead(pe_ratio, 16) +
+                        lead(pe_ratio, 17) +
+                        lead(pe_ratio, 18) +
+                        lead(pe_ratio, 19) +
+                        lead(pe_ratio, 20)) / 20) |>
+  mutate(monthly_ma_res = pe_ratio - monthly_ma) ->
+  full_data_top_10
+```
+
+## Graphs of PE and MA 
+
+Create graphs of PE over time vs the weekly and monthly MA over time to compare
+
+```{r}
+#graph for pe ratio and MA's on full data
+full_data |>
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = pe_ratio)) +
+  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
+  geom_line(mapping = aes(y = monthly_ma), color = "green") +
+  labs(title = "PE Ratio, Weekly MA, Monthly MA (full data)",
+       x = "Date",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#graph for pe ratio and MA's on over 1000 articles data
+full_data_over_1000 |>
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = pe_ratio)) +
+  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
+  geom_line(mapping = aes(y = monthly_ma), color = "green") +
+  labs(title = "PE Ratio, Weekly MA, Monthly MA (Over 1000 articles)",
+       x = "Date",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#graph for pe ratio and MA's on over 2500 articles data
+full_data_over_2500 |>
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = pe_ratio)) +
+  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
+  geom_line(mapping = aes(y = monthly_ma), color = "green") +
+  labs(title = "PE Ratio, Weekly MA, Monthly MA (Over 2500 articles)",
+       x = "Date",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#graph for pe ratio and MA's on top ten journal columns
+full_data_top_10 |>
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = pe_ratio)) +
+  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
+  geom_line(mapping = aes(y = monthly_ma), color = "green") +
+  labs(title = "PE Ratio, Weekly MA, Monthly MA (Top 10 Columns)",
+       x = "Date",
+       y= "PE Ratio") +
+  theme_minimal()
+```
+
+Find sum of squared residuals on weekly and monthly MA for each data set
+
+```{r}
+
+data_frame(Data_Set = c("Full Data", "Over 1000 Articles", "Over 2500 Articles","Top 10 Columns"),
+           SSR_Weekly_MA = c( 
+                    round(sum(full_data$weekly_ma_res^2, na.rm=TRUE),5),
+                    round(sum(full_data_over_1000$weekly_ma_res^2, na.rm=TRUE),5),
+                    round(sum(full_data_over_2500$weekly_ma_res^2, na.rm = TRUE),5), 
+                    round(sum(full_data_top_10$weekly_ma_res^2, na.rm = TRUE),5)),
+           SSR_Monthly_MA = c(
+                    round(sum(full_data$monthly_ma_res^2, na.rm=TRUE),5),
+                    round(sum(full_data_over_1000$monthly_ma_res^2, na.rm=TRUE),5),
+                    round(sum(full_data_over_2500$monthly_ma_res^2, na.rm = TRUE),5), 
+                    round(sum(full_data_top_10$monthly_ma_res^2, na.rm = TRUE),5)),
+)
+
+```
+
+As expected the weekly ma has a smaller SSR than the monthly MA, interestingly the SSR does not change rounding to 5 decimals between different data sets indicating not much substantial change in residual distribution across the data sets.
+
+## Models
+
+Explore models between daily_sent and residual from weekly and monthly PE MAs
+
+Start with weekly MA using lag length of 1 on daily_sent from previous BIC calculation
+
+```{r}
+# full data 
+lm(weekly_ma_res ~ lead(daily_sent, 1), full_data) |>
+  summary()
+
+# over 1000 articles 
+lm(weekly_ma_res ~ lead(daily_sent, 1), full_data_over_1000) |>
+  summary()
+
+#over 2500 articles
+lm(weekly_ma_res ~ lead(daily_sent, 1), full_data_over_2500) |>
+  summary()
+
+#top 10 journal columns
+lm(weekly_ma_res ~ lead(daily_sent,1), full_data_top_10) |>
+  summary()
+```
+
+Monthly MA res using lag length of 1 on daily_sent from previous BIC calculation
+
+```{r}
+lm(monthly_ma_res ~ lead(daily_sent, 1), full_data) |>
+  summary()
+
+# over 1000 articles 
+lm(monthly_ma_res ~ lead(daily_sent, 1), full_data_over_1000) |>
+  summary()
+
+#over 2500 articles
+lm(monthly_ma_res ~ lead(daily_sent, 1), full_data_over_2500) |>
+  summary()
+
+#top 10 journal columns
+lm(monthly_ma_res ~ lead(daily_sent, 1), full_data_top_10) |>
+  summary()
+```
+
+No significance and daily sent is not a good indicator for MA residuals
+
+Comparing MA of daily sent and residual against the weekly or monthly MA residuals on PE might be better
+
+Create MA and residual for weekly sentiment
+
+```{r}
+#add weekly MA to full data
+full_data |>
+  mutate(weekly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) |>
+  mutate(weekly_ma_sent_res = daily_sent - weekly_ma_sent) ->
+  full_data
+
+#add weekly MA to full data over 1000 articles
+full_data_over_1000 |>
+  mutate(weekly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) |>
+  mutate(weekly_ma_sent_res = daily_sent - weekly_ma_sent) ->
+  full_data_over_1000
+
+#add weekly MA to full data over 2,500 articles
+full_data_over_2500 |>
+  mutate(weekly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) |>
+  mutate(weekly_ma_sent_res = daily_sent - weekly_ma_sent) ->
+  full_data_over_2500
+
+#add weekly MA to full data from top ten journal columns
+full_data_top_10 |>
+  mutate(weekly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5)) / 5) |>
+  mutate(weekly_ma_sent_res = daily_sent - weekly_ma_sent) ->
+  full_data_top_10
+```
+
+create monthly MA and residuals for daily sentiment
+
+```{r}
+#add monthly MA to full data
+full_data |>
+  mutate(monthly_ma_sent = (lead(daily_sent, 1) +
                         lead(daily_sent, 2) +
                         lead(daily_sent, 3) +
                         lead(daily_sent, 4) +
@@ -817,6 +1022,124 @@ full_data_top_10 |>
                         lead(daily_sent, 17) +
                         lead(daily_sent, 18) +
                         lead(daily_sent, 19) +
-                        lead(daily_sent, 20)) / 20) ->
+                        lead(daily_sent, 20)) / 20) |>
+  mutate(monthly_ma_sent_res = daily_sent - monthly_ma_sent) ->
+  full_data
+
+#add monthly MA to full data over 1,000 artilces
+full_data_over_1000 |>
+  mutate(monthly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) |>
+  mutate(monthly_ma_sent_res = daily_sent - monthly_ma_sent) ->
+  full_data_over_1000
+
+#add monthly MA to full data over 2,500 articles
+full_data_over_2500 |>
+  mutate(monthly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) |>
+  mutate(monthly_ma_sent_res = daily_sent - monthly_ma_sent) ->
+  full_data_over_2500
+
+#add monthly MA to full data from top ten journal columns
+full_data_top_10 |>
+  mutate(monthly_ma_sent = (lead(daily_sent, 1) +
+                        lead(daily_sent, 2) +
+                        lead(daily_sent, 3) +
+                        lead(daily_sent, 4) +
+                        lead(daily_sent, 5) +
+                        lead(daily_sent, 6) +
+                        lead(daily_sent, 7) +
+                        lead(daily_sent, 8) +
+                        lead(daily_sent, 9) +
+                        lead(daily_sent, 10) +
+                        lead(daily_sent, 11) +
+                        lead(daily_sent, 12) +
+                        lead(daily_sent, 13) +
+                        lead(daily_sent, 14) +
+                        lead(daily_sent, 15) +
+                        lead(daily_sent, 16) +
+                        lead(daily_sent, 17) +
+                        lead(daily_sent, 18) +
+                        lead(daily_sent, 19) +
+                        lead(daily_sent, 20)) / 20) |>
+  mutate(monthly_ma_sent_res = daily_sent - monthly_ma_sent) ->
   full_data_top_10
+```
+
+Check model of residual PE and residual daily sent
+
+weekly ma:
+
+```{r}
+# full data 
+lm(weekly_ma_res ~ weekly_ma_sent_res, full_data) |>
+  summary()
+
+# over 1000 articles 
+lm(weekly_ma_res ~ weekly_ma_sent_res, full_data_over_1000) |>
+  summary()
+
+#over 2500 articles
+lm(weekly_ma_res ~ weekly_ma_sent_res, full_data_over_2500) |>
+  summary()
+
+#top 10 journal columns
+lm(weekly_ma_res ~ weekly_ma_sent_res, full_data_top_10) |>
+  summary()
+```
+
+monthly ma:
+
+```{r}
+# full data 
+lm(monthly_ma_res ~ monthly_ma_sent_res, full_data) |>
+  summary()
+
+# over 1000 articles 
+lm(monthly_ma_res ~ monthly_ma_sent_res, full_data_over_1000) |>
+  summary()
+
+#over 2500 articles
+lm(monthly_ma_res ~ monthly_ma_sent_res, full_data_over_2500) |>
+  summary()
+
+#top 10 journal columns
+lm(monthly_ma_res ~ monthly_ma_sent_res, full_data_top_10) |>
+  summary()
 ```
