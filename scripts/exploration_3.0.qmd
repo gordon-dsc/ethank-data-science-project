@@ -836,7 +836,7 @@ full_data_top_10 |>
   full_data_top_10
 ```
 
-## Graphs of PE and MA 
+## Graphs of PE and MA
 
 Create graphs of PE over time vs the weekly and monthly MA over time to compare
 

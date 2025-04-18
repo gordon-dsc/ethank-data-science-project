@@ -361,14 +361,15 @@ write_csv("../output/final_data.csv")
 Using refined headline data build linear model for straight comparison as well as auto regression model for changing in time
 
 ```{r}
-read.csv("../data/cleaned_data/full_data_2.0.csv") -> full_data_2.0
+read.csv("../data/cleaned_data/full_data.csv") |>
+  arrange(date) -> full_data
 ```
 
 visualization of relationship between pe_ratio and daily_sent
 
 ```{r}
 #relationship between daily sentiment and pe ratio
-full_data_2.0 |>
+full_data |>
   ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
   geom_point() +
   geom_smooth(se = FALSE) +
@@ -382,8 +383,8 @@ full_data_2.0 |>
 Linear model of straight comparison
 
 ```{r}
-lm_model_1 <- lm(pe_ratio ~ daily_sent, full_data_2.0)
-lm_model_2 <- lm(pe_ratio ~ daily_sent + change_percent, full_data_2.0)
+lm_model_1 <- lm(pe_ratio ~ daily_sent, full_data)
+lm_model_2 <- lm(pe_ratio ~ daily_sent + change_percent, full_data)
 summary(lm_model_1)
 summary(lm_model_2)
 ```
@@ -391,14 +392,14 @@ summary(lm_model_2)
 publishable table
 
 ```{r}
-stargazer(full_data_2.0, type = "text", median = TRUE, digits = 2, title = "SPY daily price, pe ratio, and journal sentiment", out = "../output/data_summary.txt")
+stargazer(full_data, type = "text", median = TRUE, digits = 2, title = "SPY daily price, pe ratio, and journal sentiment", out = "../output/data_summary.txt")
 ```
 
 ## Auto regression
 
 pe_ratio data is presented as a time series and so utilizing an auto regression to account for the lag may improve the model accuracy, we will first examine lag on daily_sent
 
-Use Bayes information criterion (BIC) to determine how much lag in daily_sent to use
+Use Bayes information criterion (BIC) to determine how much lag in pe_ratio to use
 
 ```{r}
 #create funtion to calculate BIC formulat value
@@ -420,28 +421,21 @@ order <- 1:100
 
 #test modles of different lag lengths
 BICs <- sapply(order, function(x) 
-        "AR" = BIC(dynlm(ts(full_data_2.0$pe_ratio) ~ L(ts(full_data_2.0$daily_sent), 1:x))))
+        "AR" = BIC(dynlm(ts(full_data$pe_ratio) ~ L(ts(full_data$pe_ratio), 1:x))))
 
 #select the minimized lag length - most optimal from BIC formula
 BICs[, which.min(BICs[2, ])]
 ```
 
-create model with lag length of 11 (optimal from BIC formula)
+create model with lag length of 3 (optimal from BIC formula)
 
 ```{r}
 ar_model <- lm(pe_ratio ~ daily_sent + 
                  change_percent +
-                 lag(daily_sent, 2) + 
-                 lag(daily_sent, 3) +
-                 lag(daily_sent, 4) +
-                 lag(daily_sent, 5) +
-                 lag(daily_sent, 6) +
-                 lag(daily_sent, 7) +
-                 lag(daily_sent, 8) +
-                 lag(daily_sent, 9) +
-                 lag(daily_sent, 10) +
-                 lag(daily_sent, 11),
-                 full_data_2.0)
+                 lag(pe_ratio, 1) +
+                 lag(pe_ratio, 2) +
+                 lag(pe_ratio, 3),
+                 full_data)
 summary(ar_model)
 ```
 
@@ -462,16 +456,8 @@ stargazer(lm_model_1, lm_model_2, ar_model,
           dep.var.labels = c("PE Ratio"), 
           covariate.labels = c("Daily Sentiment", 
                                "Change Percent", 
-                               "Daily Sentiment Lag 1",
-                               "Daily Sentiment Lag 2",
-                               "Daily Sentiment Lag 3",
-                               "Daily Sentiment Lag 4",
-                               "Daily Sentiment Lag 5",
-                               "Daily Sentiment Lag 6",
-                               "Daily Sentiment Lag 7",
-                               "Daily Sentiment Lag 8",
-                               "Daily Sentiment Lag 9",
-                               "Daily Sentiment Lag 10",
-                               "Daily Sentiment Lag 11"), 
-          out = "../output/models_summary.txt")
+                               "$Daily Sentiment (t-1)$",
+                               "$Daily Sentiment (t-2)$",
+                               "$Daily Sentiment (t-3)$"), 
+          out = "../output/models_summary_1.1.txt")
 ```
