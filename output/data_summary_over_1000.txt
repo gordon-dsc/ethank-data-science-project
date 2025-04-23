@@ -1,5 +1,5 @@
 
-SPY daily price, PE Ratio, and Journal Sentiment
+SPY daily price, PE Ratio, and Journal Sentiment (Over 1000 Articles)
 =================================================================
 Statistic        N     Mean   St. Dev.   Min     Median    Max   
 -----------------------------------------------------------------

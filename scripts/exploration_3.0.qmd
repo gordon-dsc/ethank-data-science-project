@@ -518,10 +518,10 @@ publishable table
 
 ```{r}
 #over 1000 articles
-stargazer(full_data_over_1000, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment", out = "../output/data_summary_over_1000.txt")
+stargazer(full_data_over_1000, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment (Over 1000 Articles)", out = "../output/data_summary_over_1000.txt")
 
 #over 2000 articles
-stargazer(full_data_over_2500, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment", out = "../output/data_summary_over_2500.txt")
+stargazer(full_data_over_2500, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment (Over 2,500 Articles)", out = "../output/data_summary_over_2500.txt")
 
 #top ten holdings
 stargazer(full_data_over_2500, type = "text", median = TRUE, digits = 2, title = "SPY daily price, PE Ratio, and Journal Sentiment (Top 10 Journal Columns)", out = "../output/data_summary_top_10.txt")
@@ -884,6 +884,18 @@ full_data_top_10 |>
        x = "Date",
        y= "PE Ratio") +
   theme_minimal()
+
+#graph for pe ratio and MA's on top ten journal columns
+full_data_top_10 |>
+  slice(1:250) |>
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = pe_ratio)) +
+  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
+  geom_line(mapping = aes(y = monthly_ma), color = "green") +
+  labs(title = "PE Ratio, Weekly MA, Monthly MA (Top 10 Columns) 2024",
+       x = "Date",
+       y= "PE Ratio") +
+  theme_minimal()
 ```
 
 Find sum of squared residuals on weekly and monthly MA for each data set
@@ -1143,3 +1155,39 @@ lm(monthly_ma_res ~ monthly_ma_sent_res, full_data_over_2500) |>
 lm(monthly_ma_res ~ monthly_ma_sent_res, full_data_top_10) |>
   summary()
 ```
+
+# test
+
+start with this
+
+```{r}
+lm(pe_ratio ~ daily_sent, full_data) |>
+summary()
+```
+
+not sure of causality
+
+```{r}
+lm(pe_ratio ~ lag(daily_sent, 1), full_data) |>
+  summary()
+```
+
+still significant and positive showing causality of sent to affect pe ratio (USE RMSE)
+
+try bunches of lag terms from BIC
+
+Tried change in PE next as response to incorporate the fact that PE is related to PE at (t-1)
+
+```{r}
+#do this with optimized lags on both pe_ratio and daily_sent (if all BIC models are similar just choose the simplest model)
+lm(pe_ratio ~ lag(pe_ratio,1) + lag(daily_sent,1), full_data) |>
+  summary()
+```
+
+make diagnostic plots on all of these models
+
+then de-trended the PE ratios on weekly and monthly basis
+
+is de-trended PE auto correlated? - YES
+
+can do different categories with at least 5 headlines a day add all as different dependent varaibles
