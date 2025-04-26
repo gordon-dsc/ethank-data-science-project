@@ -1182,7 +1182,7 @@ sqrt(mean(lm_4.1$residuals^2))
 plot(lm_4.1)
 ```
 
-not sure of causality
+not sure of causality so add a lag term on daily_sent (day before affects this day)
 
 ```{r}
 lm(pe_ratio ~ lag(daily_sent, 1), full_data) -> lm_4.2
@@ -1375,7 +1375,7 @@ summary(ar_4.4)
 plot(ar_4.4)
 ```
 
-can do different categories with at least 5 headlines a day add all as different dependent variables
+can do different categories with at least 5 headlines a day add all, as different dependent variables
 
 ```{r}
 #import original data
@@ -1392,6 +1392,9 @@ read_csv("../data/imported_data/spy_data.csv") |>
            month = month(date),
            year = year(date))->
   spy_data
+
+#duplicate full_data 
+full_data -> full_data_sec
 ```
 
 ```{r}
@@ -1401,6 +1404,54 @@ wsj_data_sent |>
   summarise(count = n()) |>
   filter(count >= 10000) -> top_columns
 
-#make sentiment columns for all articles, and indiviudal columns
+#make data set of each of the top_colums
+for(i in top_columns$column){
+  wsj_data_sent |>
+    filter(column == i) -> temp
+    assign(paste("column_data_", i, sep = ""),temp)
+}
 
+#add each of the sentiments for the column to the full_data
+for(i in top_columns$column) {
+  get(paste("column_data_", i, sep = "")) |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) |>
+    select(sentiment, date) |>
+    group_by(date) |>
+    summarise(daily_sent = mean(sentiment)) |>
+    inner_join(spy_data, by = c("date")) |>
+    select(date, daily_sent) |>
+    rename_with(~paste("daily_sent_", i, sep = ""), .cols = c(daily_sent)) |>
+    janitor::clean_names()-> temp
+  
+  full_data_sec |>
+      mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) |>
+    full_join(temp, by = c("date")) -> full_data_sec
+}
+```
+
+model with all other sentiments
+
+```{r}
+#model with top column sentiments
+lm(pe_ratio ~ lag(daily_sent, 1) +
+     lag(daily_sent_business, 1 ) +
+     lag(daily_sent_commentary, 1) +
+     lag(daily_sent_heard_on_the_street, 1) +
+     lag(daily_sent_letters, 1) +
+     lag(daily_sent_markets, 1) +
+     lag(daily_sent_politics, 1) +
+     lag(daily_sent_review_outlook, 1) +
+     lag(daily_sent_tech, 1) +
+     lag(daily_sent_u_s, 1) +
+     lag(daily_sent_world, 1) +
+     lag(pe_ratio,1), 
+   full_data_sec) -> ar_4.5
+summary(ar_4.5)
+plot(ar_4.5)
 ```
