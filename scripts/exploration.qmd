@@ -456,8 +456,8 @@ stargazer(lm_model_1, lm_model_2, ar_model,
           dep.var.labels = c("PE Ratio"), 
           covariate.labels = c("Daily Sentiment", 
                                "Change Percent", 
-                               "$Daily Sentiment (t-1)$",
-                               "$Daily Sentiment (t-2)$",
-                               "$Daily Sentiment (t-3)$"), 
+                               "$PE Ratio (t-1)$",
+                               "$PE Ratio (t-2)$",
+                               "$PE Ratio (t-3)$"), 
           out = "../output/models_summary_1.1.txt")
 ```
