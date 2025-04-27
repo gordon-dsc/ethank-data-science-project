@@ -1,0 +1,502 @@
+---
+title: "exploration_2.0"
+format: html
+---
+
+---
+title: "Data Analysis Script"
+format: html
+---
+
+# Libraries and Packages
+
+```{r packages}
+#install needed packages and libraries
+install.packages("tidyverse") #general tidyverse functions
+install.packages("stargazer") #to create display tables for data and models
+library(tidyverse)
+library(stargazer)
+library(AER) #to help with econometric functions
+library(dynlm) #to help with autoregression models
+```
+
+# Import Data
+
+Import cleaned data folder
+
+```{r}
+#import the full data set (daily data over time period with all variables of interest)
+#The date column imports as character so mutate function changes back to date time object
+read.csv("../data/cleaned_data/full_data.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> full_data
+
+
+#Complete WSJ headline data before summarising by day
+#The date column imports as character so mutate function changes back to date time object
+read.csv("../data/cleaned_data/wsj_data_sent.csv") |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) -> wsj_data_sent
+
+
+#import PE data
+read.csv("../data/cleaned_data/pe_data.csv") -> pe_data
+
+#import SPY data, date column turns to character so parse back to date time object
+read_csv("../data/imported_data/spy_data.csv") |>
+    mutate(change_percent = parse_number(change_percent)/100,
+           date = parse_date_time(date, orders = "mdy"),
+           month = month(date), #extract the month from date time object
+           year = year(date))-> #extract the monthg from date time object
+  spy_data
+```
+
+# Exploration
+
+To being to explore the answer to the research questions, how does sentiment in headlines affect changes in valuations, a heat map of correlations between variables is created
+
+```{r}
+#using the full data set create the heat map of variable correlations
+full_data |>
+  select(2:8)|>
+  cor() |>
+  reshape2::melt() |>
+    ggplot(aes(x = Var1, y = Var2, fill = value)) +
+    labs(title = "Variable Correlation Heat Map",
+         x = "" ,
+         y ="") +
+    theme(axis.text.x = element_text(angle = 45,
+                                     vjust = 0.5,
+                                     hjust = 0.5)) + 
+     geom_tile()
+
+#save plot to output file
+ggsave("../output/variable_correlation_heat_map.pdf",
+       width = 10,
+       height = 7)
+```
+
+Next create some exploratory plots to explore data and answer questions
+
+## Data exploratory plots
+
+```{r}
+#distribution of daily sent variable
+full_data |>
+  ggplot(mapping = aes(x = daily_sent)) +
+  geom_density() +
+  labs(title = "Distribution of Daily Sentiment Variable", 
+       x = "Daily Sentiment", 
+       y = "") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/distribution_of_daily_sent.pdf",
+       width = 10,
+       height = 7)
+
+
+#PE ratios over time
+full_data |>
+  ggplot(mapping = aes(y = pe_ratio, x = date)) +
+  geom_line() +
+  labs(title = "PE Ratio over Time Period", x = "Date", y = "PE Ratio") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/pe_ratio_over_time.pdf",
+       width = 10,
+       height = 7)
+
+#Distribution in change in PE ratios
+full_data |>
+  mutate(change_pe = pe_ratio - lag(pe_ratio, 1)) |> #add change in pe ratio variable
+  ggplot(mapping = aes(x = change_pe)) +
+  geom_density() +
+  labs(title = "Distribution of Change in PE", x = "Change PE") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/change_pe_ratio.pdf",
+       width = 10,
+       height = 7)
+
+
+#distribution of headline observations over time
+wsj_data_sent |>
+  group_by(date) |>
+  summarize(count = n()) |>
+  ggplot(mapping = aes(x = date, y = count, color = weekdays(date))) +
+  geom_point() +  
+  labs(title = "Number of Articles by Day of Week",
+       x = "Date",
+       y= "Number of Articles",
+       color = "Day of Week") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/articles_by_day_of_week.pdf",
+       width = 10,
+       height = 7)
+```
+
+## Visualization of Exploratory Models
+
+```{r}
+#relationship between daily sentiment and pe ratio
+full_data |>
+  ggplot(mapping = aes(x = daily_sent, y = pe_ratio)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs PE Ratio",
+       x = "Daily Sentiment",
+       y= "PE Ratio") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/pe_ratio_vs_daily_sent.pdf",
+       width = 10,
+       height = 7)
+
+#relationship between daily sentiment and change in pe ratio
+full_data |>
+  mutate(change_pe = pe_ratio - lag(pe_ratio, 1)) |> #add change in pe ratio variable
+  ggplot(mapping = aes(x = daily_sent, y = change_pe)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Daily Sentiment vs Change in PE Ratio",
+       x = "Daily Sentiment",
+       y= "Change in PE Ratio") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/change_pe_vs_daily_sent.pdf",
+       width = 10,
+       height = 7)
+```
+
+Summary table to data to be used in modeling
+
+```{r}
+#use stargazer to create summary table in publishable format
+stargazer(full_data,
+          type = "text",
+          median = TRUE,
+          digits = 2,
+          title = "Summary of Data",
+          out = "../output/data_summary.txt")
+```
+
+# Models
+
+start with this
+
+```{r}
+lm(pe_ratio ~ daily_sent, full_data) -> lm_4.1
+summary(lm_4.1)
+
+#RMSE
+sqrt(mean(lm_4.1$residuals^2))
+
+plot(lm_4.1)
+```
+
+not sure of causality so add a lag term on daily_sent (day before affects this day)
+
+```{r}
+lm(pe_ratio ~ lag(daily_sent, 1), full_data) -> lm_4.2
+  summary(lm_4.2)
+
+#RMSE
+sqrt(mean(lm_4.2$residuals^2))
+  
+plot(lm_4.2)
+```
+
+still significant and positive showing causality of sent to affect pe ratio (USE RMSE)
+
+try bunches of lag terms from BIC on daily sent
+
+```{r}
+#BIC Function
+BIC <- function(model) {
+  
+  ssr <- sum(model$residuals^2)
+  t <- length(model$residuals)
+  npar <- length(model$coef)
+  
+  return(
+    round(c("p" = npar - 1,
+          "BIC" = log(ssr/t) + npar * log(t)/t,
+          "Adj.R2" = summary(model)$adj.r.squared), 4)
+  )
+}
+```
+
+```{r}
+#how many different lag lengths to test
+order <- 1:100
+
+#test models of different lage lengths for PE ratio
+BICs <- sapply(order, function(x) 
+        BIC(dynlm(ts(full_data$pe_ratio) ~ L(ts(full_data$daily_sent), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs[, which.min(BICs[2, ])]
+
+```
+
+lag term for daily sent is optimal at 1 by BIC
+
+Next test different lengths of auto regression on pe_ratio
+
+```{r}
+#how many different lag lengths to test
+order <- 1:100
+
+#test models of different lage lengths for PE ratio
+BICs <- sapply(order, function(x) 
+        BIC(dynlm(ts(full_data$pe_ratio) ~ L(ts(lag(full_data$daily_sent,1))) + L(ts(full_data$pe_ratio), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs[, which.min(BICs[2, ])]
+
+```
+
+optimal length is 4 but difference in BIC is minimal so will run model with 4 and with 1 lag terms and compare to see if added complexity is worth it
+
+```{r}
+#model with four lag terms for pe_ratio
+lm(pe_ratio ~ lag(daily_sent, 1) +
+     lag(pe_ratio,1) +
+     lag(pe_ratio,2) +
+     lag(pe_ratio,3) +
+     lag(pe_ratio,4), 
+   full_data) -> ar_4.1
+summary(ar_4.1)
+plot(ar_4.1)
+
+#model with only one lag term for pe_ratio
+lm(pe_ratio ~ lag(daily_sent, 1) +
+     lag(pe_ratio,1), 
+   full_data) -> ar_4.2
+summary(ar_4.2)
+plot(ar_4.2)
+```
+
+then de-trended the PE ratios on weekly and monthly basis
+
+```{r}
+#create weekly and monthly detrended variables for pe_ratio
+#add weekly MA to full data and detrended variable (weekly_ma_res)
+full_data |>
+  mutate(weekly_ma = (lag(pe_ratio, 1) +
+                        lag(pe_ratio, 2) +
+                        lag(pe_ratio, 3) +
+                        lag(pe_ratio, 4) +
+                        lag(pe_ratio, 5)) / 5) |>
+  mutate(weekly_ma_res = pe_ratio - weekly_ma) ->
+  full_data
+
+#add monthly MA to full data and dretrended variable (montly_ma_res)
+full_data |>
+  mutate(monthly_ma = (lag(pe_ratio, 1) +
+                        lag(pe_ratio, 2) +
+                        lag(pe_ratio, 3) +
+                        lag(pe_ratio, 4) +
+                        lag(pe_ratio, 5) +
+                        lag(pe_ratio, 6) +
+                        lag(pe_ratio, 7) +
+                        lag(pe_ratio, 8) +
+                        lag(pe_ratio, 9) +
+                        lag(pe_ratio, 10) +
+                        lag(pe_ratio, 11) +
+                        lag(pe_ratio, 12) +
+                        lag(pe_ratio, 12) +
+                        lag(pe_ratio, 14) +
+                        lag(pe_ratio, 15) +
+                        lag(pe_ratio, 16) +
+                        lag(pe_ratio, 17) +
+                        lag(pe_ratio, 18) +
+                        lag(pe_ratio, 19) +
+                        lag(pe_ratio, 20)) / 20) |>
+  mutate(monthly_ma_res = pe_ratio - monthly_ma) ->
+  full_data
+```
+
+graph of MA in pe
+
+```{r}
+#graph for pe ratio and MA's on full data
+full_data |>
+  slice(1:250) |>
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = pe_ratio)) +
+  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
+  geom_line(mapping = aes(y = monthly_ma), color = "green") +
+  labs(title = "PE Ratio, Weekly MA, Monthly MA",
+       x = "Date",
+       y= "PE Ratio") +
+  theme_minimal()
+```
+
+is de-trended PE easier to predict?
+
+will need to optimize BIC again for lag length on weekly and monthly de-trended autocorrelation predictor
+
+```{r}
+#weekly BIC optimization
+#how many different lag lengths to test
+order <- 1:100
+
+#test models of different lage lengths for detrended PE ratio
+#removed rows with N/As
+BICs <- sapply(order, function(x) 
+        BIC(dynlm(ts(full_data$weekly_ma_res[6:2516]) ~ L(ts(lag(full_data$daily_sent[6:2516],1))) + L(ts(full_data$weekly_ma_res[6:2516]), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs[, which.min(BICs[2, ])]
+```
+
+4 is BIC optimal for weekly de-trended pe but still not large differences with just using 1 lag term
+
+```{r}
+#monthly BIC optimization
+#how many different lag lengths to test
+order <- 1:100
+
+#test models of different lage lengths for detrended PE ratio
+#removed rows with N/As
+BICs <- sapply(order, function(x) 
+        BIC(dynlm(ts(full_data$monthly_ma_res[21:2516]) ~ L(ts(lag(full_data$daily_sent[21:2516],1))) + L(ts(full_data$monthly_ma_res[21:2516]), 1:x))))
+
+#select the minimized lag length - most optimal from BIC formula
+BICs[, which.min(BICs[2, ])]
+```
+
+4 is BIC optimal for weekly de-trended pe but still not large differences with just using 1 lag term
+
+take a look at models for weekly and monthly de-trended pe
+
+```{r}
+#model for weekly de-trended PE
+lm(weekly_ma_res ~ lag(daily_sent, 1) +
+     lag(weekly_ma_res,1), 
+   full_data) -> ar_4.3
+summary(ar_4.3)
+plot(ar_4.3)
+
+#model for monthly de-trended PE
+lm(monthly_ma_res ~ lag(daily_sent, 1) +
+     lag(monthly_ma_res,1), 
+   full_data) -> ar_4.4
+summary(ar_4.4)
+plot(ar_4.4)
+```
+
+can do different categories with at least 5 headlines a day add all, as different dependent variables
+
+```{r}
+#import original data
+#headline data
+read.csv("../data/cleaned_data/wsj_data_sent.csv") -> wsj_data_sent
+
+#import PE data
+read.csv("../data/cleaned_data/pe_data.csv") -> pe_data
+
+#import SPY data with some small modifications for easier join
+read_csv("../data/imported_data/spy_data.csv") |>
+    mutate(change_percent = parse_number(change_percent)/100,
+           date = parse_date_time(date, orders = "mdy"),
+           month = month(date),
+           year = year(date))->
+  spy_data
+
+#duplicate full_data 
+full_data -> full_data_sec
+```
+
+```{r}
+#get headline columns with at least 5 a day (10 years * 250 days * 4 articles = 10,000 article)
+wsj_data_sent |>
+  group_by(column) |>
+  summarise(count = n()) |>
+  filter(count >= 10000) -> top_columns
+
+#make data set of each of the top_colums
+for(i in top_columns$column){
+  wsj_data_sent |>
+    filter(column == i) -> temp
+    assign(paste("column_data_", i, sep = ""),temp)
+}
+
+#add each of the sentiments for the column to the full_data
+for(i in top_columns$column) {
+  get(paste("column_data_", i, sep = "")) |>
+    mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) |>
+    select(sentiment, date) |>
+    group_by(date) |>
+    summarise(daily_sent = mean(sentiment)) |>
+    inner_join(spy_data, by = c("date")) |>
+    select(date, daily_sent) |>
+    rename_with(~paste("daily_sent_", i, sep = ""), .cols = c(daily_sent)) |>
+    janitor::clean_names()-> temp
+  
+  full_data_sec |>
+      mutate(date = parse_date_time(str_extract(
+    date, 
+    pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
+    orders = "ymd")) |>
+    full_join(temp, by = c("date")) -> full_data_sec
+}
+```
+
+model with all other sentiments
+
+```{r}
+#model with top column sentiments
+lm(pe_ratio ~ lag(daily_sent, 1) +
+     lag(daily_sent_business, 1 ) +
+     lag(daily_sent_commentary, 1) +
+     lag(daily_sent_heard_on_the_street, 1) +
+     lag(daily_sent_letters, 1) +
+     lag(daily_sent_markets, 1) +
+     lag(daily_sent_politics, 1) +
+     lag(daily_sent_review_outlook, 1) +
+     lag(daily_sent_tech, 1) +
+     lag(daily_sent_u_s, 1) +
+     lag(daily_sent_world, 1) +
+     lag(pe_ratio,1), 
+   full_data_sec) -> ar_4.5
+summary(ar_4.5)
+plot(ar_4.5)
+```
+
+summary table with all AR models
+
+```{r}
+# gather robust standard errors in a list
+rob_se <- list(sqrt(diag(vcovHC(lm_4.1, type = "HC1"))),
+               sqrt(diag(vcovHC(lm_4.2, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.1, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.2, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.3, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.4, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.5, type = "HC1"))))
+
+
+#create publishing table of all models
+stargazer(lm_4.1, lm_4.2, ar_4.1, ar_4.2, ar_4.3, ar_4.4, ar_4.5,
+          type = "text", 
+          se = rob_se,
+          digits = 3,
+          column.labels = c("(LM 21", "(LM 2)", "(AR 1)", "(AR 2)", "(AR 3)", "(AR 4)", "(AR 5)"),
+          out = "../output/models_summary_4.0.txt")
+```

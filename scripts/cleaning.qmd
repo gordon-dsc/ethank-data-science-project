@@ -14,7 +14,7 @@ library(sentimentr)
 
 # Load Data Sets
 
-Load in data sets from import folder
+Load in data sets from import data folder
 
 ```{r}
 #laod in wsj_data
