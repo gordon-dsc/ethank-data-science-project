@@ -1455,3 +1455,25 @@ lm(pe_ratio ~ lag(daily_sent, 1) +
 summary(ar_4.5)
 plot(ar_4.5)
 ```
+
+summary table with all AR models
+
+```{r}
+# gather robust standard errors in a list
+rob_se <- list(sqrt(diag(vcovHC(lm_4.1, type = "HC1"))),
+               sqrt(diag(vcovHC(lm_4.2, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.1, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.2, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.3, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.4, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.5, type = "HC1"))))
+
+
+#create publishing table of all models
+stargazer(lm_4.1, lm_4.2, ar_4.1, ar_4.2, ar_4.3, ar_4.4, ar_4.5,
+          type = "text", 
+          se = rob_se,
+          digits = 3,
+          column.labels = c("(LM 21", "(LM 2)", "(AR 1)", "(AR 2)", "(AR 3)", "(AR 4)", "(AR 5)"),
+          out = "../output/models_summary_4.0.txt")
+```
