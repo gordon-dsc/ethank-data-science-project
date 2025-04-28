@@ -193,55 +193,70 @@ stargazer(full_data,
 
 # Models
 
-start with this
+The following models all attempt to help explain the relationship between the sentiment within the WSJ headlines and the market valuations. (note: RMSE is used to evaluate model accuracy as R squared is naturally very small, most market changes come from changes in economic conditions)
+
+The first model that will be evaluated is a simple linear relationship between the PE ratio (market valuations) and daily_sent (WSJ headline sentiment)
 
 ```{r}
+#linear model with pe_ratio as dependant and daily_sent as independant 
 lm(pe_ratio ~ daily_sent, full_data) -> lm_4.1
+
+#summary statistics is on model
 summary(lm_4.1)
 
-#RMSE
+#RMSE calculation - 4.0488 in this case
 sqrt(mean(lm_4.1$residuals^2))
 
-plot(lm_4.1)
+#diagnostic plots for model
+plot(lm_4.1) 
 ```
 
-not sure of causality so add a lag term on daily_sent (day before affects this day)
+This first linear models shows a positive statistically significant coefficient for daily_sent as a explanatory variable for pe_ratio. This is a good first step but doesn't show causality as they occur simultaneous (happen on the same day). The next model seeks to establish causality by looking at sentiment on the previous day (t-1) as and explanatory variable for pe_ratio.
 
 ```{r}
+#linear model with pe_ratio as dependant and daily_sent (t-1) as independant
 lm(pe_ratio ~ lag(daily_sent, 1), full_data) -> lm_4.2
-  summary(lm_4.2)
-
-#RMSE
-sqrt(mean(lm_4.2$residuals^2))
   
+#summary statistics is on model
+summary(lm_4.2)
+
+#RMSE calculation - 4.0495
+sqrt(mean(lm_4.2$residuals^2))
+
+#diagnostic plots for model
 plot(lm_4.2)
 ```
 
-still significant and positive showing causality of sent to affect pe ratio (USE RMSE)
+This second model has a very similar result with the independent variable daily_sent (t-1) have both a positive and statisticlly significant coefficient. It also helps to make the cause for causality by using the day before with sentiment data - previous daily news sentiment has a statically significant affect on pe_ratio.
 
-try bunches of lag terms from BIC on daily sent
+A natural next step is to try different lengths of lag terms on the daily_sent variable to create more robust auto regression models. The Bayesian Information Criterion (BIC) is used to evaluate many different lengths of lag terms to select one that balances model accuracy with risk of over fitting.
+
+The code chunk below is a function for running models of various lag lengths through the BIC formula. By this theory selecting the model that produces the lowest BIC value is optimal. Selecting nearby lengths with similar BIC's is acceptable to simplify the model.
 
 ```{r}
-#BIC Function
+#BIC function
 BIC <- function(model) {
   
+  #extract model accuracy statistics
   ssr <- sum(model$residuals^2)
   t <- length(model$residuals)
   npar <- length(model$coef)
   
   return(
-    round(c("p" = npar - 1,
-          "BIC" = log(ssr/t) + npar * log(t)/t,
-          "Adj.R2" = summary(model)$adj.r.squared), 4)
-  )
+    round(c("p" = npar - 1, #length of lag term
+          "BIC" = log(ssr/t) + npar * log(t)/t, #BIC formula result
+          "Adj.R2" = summary(model)$adj.r.squared), 4) #adjusted r squared of model
+    )
 }
 ```
 
+Next run this function on the last model form to optimize the length of lag term on daily_sent variable
+
 ```{r}
-#how many different lag lengths to test
+#how many different lag lengths to test (100 as top limit as any more become nonsensical)
 order <- 1:100
 
-#test models of different lage lengths for PE ratio
+#run model form through BIC function to create table lag length, BIC value, and adjusted R squared
 BICs <- sapply(order, function(x) 
         BIC(dynlm(ts(full_data$pe_ratio) ~ L(ts(full_data$daily_sent), 1:x))))
 
@@ -250,15 +265,17 @@ BICs[, which.min(BICs[2, ])]
 
 ```
 
-lag term for daily sent is optimal at 1 by BIC
+The result of running the model for through the BIC function shows the most optimaly length to lag for daily_sent is 1, or one day. This is the same as the previous lm_4.2 but can now select lag length of 1 with more confidence.
 
-Next test different lengths of auto regression on pe_ratio
+The PE ratio variable is a time series variable, it is heavily correlated with its own previous values. Incorporating previous pe_ratio values should improve the accuracy of the auto regression models and help control for this correlation.
+
+First run the new model form with a lag on pe_ratio through the BIC function
 
 ```{r}
-#how many different lag lengths to test
+#how many different lag lengths to test (100 as top limit as any more become nonsensical)
 order <- 1:100
 
-#test models of different lage lengths for PE ratio
+#run model form through BIC function to create table lag length, BIC value, and adjusted R squared
 BICs <- sapply(order, function(x) 
         BIC(dynlm(ts(full_data$pe_ratio) ~ L(ts(lag(full_data$daily_sent,1))) + L(ts(full_data$pe_ratio), 1:x))))
 
@@ -267,44 +284,62 @@ BICs[, which.min(BICs[2, ])]
 
 ```
 
-optimal length is 4 but difference in BIC is minimal so will run model with 4 and with 1 lag terms and compare to see if added complexity is worth it
+Optimal lag length is 4 from this run on BIC however the actual differnce in BIC value from the optimal 4 length and much simpler 1 length is small (0.0038) so I will run a model at lag length 4 and lag length 1 to compare accuracy and see if added complexity is worth it.
 
 ```{r}
-#model with four lag terms for pe_ratio
+#model with 4 lag terms for pe_ratio
 lm(pe_ratio ~ lag(daily_sent, 1) +
      lag(pe_ratio,1) +
      lag(pe_ratio,2) +
      lag(pe_ratio,3) +
      lag(pe_ratio,4), 
    full_data) -> ar_4.1
+
+#summary statistics on model 
 summary(ar_4.1)
+
+#RMSE calculation - 0.3742
+sqrt(mean(ar_4.1$residuals^2))
+
+#diagnostic plots on model
 plot(ar_4.1)
+
+
 
 #model with only one lag term for pe_ratio
 lm(pe_ratio ~ lag(daily_sent, 1) +
      lag(pe_ratio,1), 
    full_data) -> ar_4.2
+
+#summary statistics on model 
 summary(ar_4.2)
+
+#RMSE calculation - 0.3762
+sqrt(mean(ar_4.2$residuals^2))
+
+#diagnostic plots on model
 plot(ar_4.2)
 ```
 
-then de-trended the PE ratios on weekly and monthly basis
+The more optimal and complex model at lag length 4 is only marginally more accurate than simple lag length one model. The difference in RMSE of 0.002 is not worth the added complexity so lag length of one for pe_ratio will be used moving forward.
+
+Another method to incorporate the time nature of the data is to de-trend the independent pe_ratio variable. This will change the model to be predicting residuals from a moving average instead of the actual pe_ratio itself. This study will de-trend using both a weekly and monthly moving average. The next code chunk creates the moving average variables and residuals on weekly and monthly bases (note: this study focuses on trading days - 5 days a week - 20 days a month).
 
 ```{r}
 #create weekly and monthly detrended variables for pe_ratio
 #add weekly MA to full data and detrended variable (weekly_ma_res)
 full_data |>
-  mutate(weekly_ma = (lag(pe_ratio, 1) +
+  mutate(weekly_ma = (lag(pe_ratio, 1) + #create weekly moving average
                         lag(pe_ratio, 2) +
                         lag(pe_ratio, 3) +
                         lag(pe_ratio, 4) +
                         lag(pe_ratio, 5)) / 5) |>
-  mutate(weekly_ma_res = pe_ratio - weekly_ma) ->
+  mutate(weekly_ma_res = pe_ratio - weekly_ma) -> #create residaul from moving average
   full_data
 
 #add monthly MA to full data and dretrended variable (montly_ma_res)
 full_data |>
-  mutate(monthly_ma = (lag(pe_ratio, 1) +
+  mutate(monthly_ma = (lag(pe_ratio, 1) + #create monthly moving average
                         lag(pe_ratio, 2) +
                         lag(pe_ratio, 3) +
                         lag(pe_ratio, 4) +
@@ -324,29 +359,108 @@ full_data |>
                         lag(pe_ratio, 18) +
                         lag(pe_ratio, 19) +
                         lag(pe_ratio, 20)) / 20) |>
-  mutate(monthly_ma_res = pe_ratio - monthly_ma) ->
+  mutate(monthly_ma_res = pe_ratio - monthly_ma) -> #create residual from moving average
   full_data
 ```
 
-graph of MA in pe
+Create a graph of pe_ratio, weekly moving average, and monthly moving average
 
 ```{r}
-#graph for pe ratio and MA's on full data
+#graph for pe ratio and MA's
 full_data |>
-  slice(1:250) |>
+  slice(1:250) |> #focus on last 250 value of time period to zoom in 
   ggplot(mapping = aes(x = date)) +
-  geom_line(mapping = aes(y = pe_ratio)) +
-  geom_line(mapping = aes(y = weekly_ma), color = "blue") +
-  geom_line(mapping = aes(y = monthly_ma), color = "green") +
-  labs(title = "PE Ratio, Weekly MA, Monthly MA",
+  geom_line(mapping = aes(y = pe_ratio, color = "pe_ratio")) +     
+  geom_line(mapping = aes(y = weekly_ma, color = "weekly_ma")) +
+  geom_line(mapping = aes(y = monthly_ma, color = "monthly_ma")) +
+  scale_color_manual(values = c(
+    "pe_ratio" = "black",       # color for PE Ratio line
+    "weekly_ma" = "green2",     # color for Weekly MA line
+    "monthly_ma" = "blue" )) +  # color for Monthly MA line
+  labs(title = "PE Ratio & Moving Averages",
        x = "Date",
-       y= "PE Ratio") +
-  theme_minimal()
+       y= "PE Ratio",
+       color = "Legend") +
+  theme_minimal() 
+  
+#save plot to output file
+ggsave("../output/pe_ratio_&_moving_averages.pdf",
+       width = 10,
+       height = 7)
 ```
 
-is de-trended PE easier to predict?
+Graphs of residuals after both weekly and monthly de-trending
 
-will need to optimize BIC again for lag length on weekly and monthly de-trended autocorrelation predictor
+```{r}
+#weekly ma 
+#line graph of detrended weekly ma residuals
+full_data |>
+  slice(1:250) |> #same time period to demonstrate detrending
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = weekly_ma_res)) +
+  geom_hline(yintercept = 0, color = "red") + # horizontal line at y = 0
+  labs(title = "De-trended weekly moving average PE residuals",
+       x = "Date",
+       y= "PE Residual") +
+  theme_minimal() 
+
+#save plot to output file
+ggsave("../output/de-trended_weekly_pe_line.pdf",
+       width = 10,
+       height = 7)
+
+#histogram of detrended weekly ma residuals
+full_data |>
+  ggplot(mapping = aes(x = weekly_ma_res)) +
+  geom_density() +
+  labs(title = "De-trended weekly moving average PE residuals distribution",
+       x = "Weekly Moving Average PE Residulas",
+       y = "") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/de-trended_weekly_pe_histogram.pdf",
+       width = 10,
+       height = 7)
+
+
+#monthly ma 
+#line graph of detrended monthly ma residuals
+full_data |>
+  slice(1:250) |> #same time period to demonstrate detrending
+  ggplot(mapping = aes(x = date)) +
+  geom_line(mapping = aes(y = monthly_ma_res)) +
+  geom_hline(yintercept = 0, color = "red") + # horizontal line at y = 0
+  labs(title = "De-trended monthly moving average PE residuals",
+       x = "Date",
+       y= "PE Residual") +
+  theme_minimal() 
+
+#save plot to output file
+ggsave("../output/de-trended_monthly_pe_line.pdf",
+       width = 10,
+       height = 7)
+
+#histogram of detrended monthly ma residuals
+full_data |>
+  ggplot(mapping = aes(x = monthly_ma_res)) +
+  geom_density() +
+  labs(title = "De-trended monthly moving average PE residuals distribution",
+       x = "Monthly Moving Average PE Residuals",
+       y = "") +
+  theme_minimal()
+
+#save plot to output file
+ggsave("../output/de-trended_monthly_pe_histogram.pdf",
+       width = 10,
+       height = 7)
+```
+
+Is de-trended PE easier to predict on weekly or monthly basis?
+
+Will need to optimize BIC again for lag length on weekly and monthly de-trended autocorrelation predictors
+
+# got to here
 
 ```{r}
 #weekly BIC optimization
