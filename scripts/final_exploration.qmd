@@ -193,7 +193,9 @@ stargazer(full_data,
           out = "../output/data_summary.txt")
 ```
 
-# Models
+# Modelling
+
+## Linear & Simple Auto Regression Models
 
 The following models all attempt to help explain the relationship between the sentiment within the WSJ headlines and the market valuations. (note: RMSE is used to evaluate model accuracy as R squared is naturally very small, most market changes come from changes in economic conditions)
 
@@ -324,6 +326,8 @@ plot(ar_4.2)
 ```
 
 The more optimal and complex model at lag length 4 is only marginally more accurate than simple lag length one model. The difference in RMSE of 0.002 is not worth the added complexity so lag length of one for pe_ratio will be used moving forward.
+
+## De-Trended Models
 
 Another method to incorporate the time nature of the data is to de-trend the independent pe_ratio variable. This will change the model to be predicting residuals from a moving average instead of the actual pe_ratio itself. This study will de-trend using both a weekly and monthly moving average. The next code chunk creates the moving average variables and residuals on weekly and monthly bases (note: this study focuses on trading days - 5 days a week - 20 days a month).
 
@@ -498,7 +502,7 @@ BICs[, which.min(BICs[2, ])]
 
 The optimal BIC value is a lag length of 15 for the monthly de-trended pe_ratio. While this is a much larger lag length than the 4 recommended for weekly de-trended pe_ratio the simpler model with lag length of 1 is still preferred as the difference in BIC value of 0.0207 is still not significant.
 
-Create autoregression models for predicting de-trended weekly and monthly pe_ratios
+Create auto regression models for predicting de-trended weekly and monthly pe_ratios
 
 ```{r}
 #model for weekly de-trended PE
@@ -530,46 +534,32 @@ sqrt(mean(ar_4.4$residuals^2))
 plot(ar_4.4)
 ```
 
-# got to here
+Both these models do have strong predictability but produce higher RMSE than model ar_4.2 at RMSE value of 0.3764. For ease of interpretation and improved accuracy it is better to use pe_ratio as independent variable instead of either monthly or weekly de-trended pe_ratios.
 
-can do different categories with at least 5 headlines a day add all, as different dependent variables
+## Topical Models
+
+The last model form this study examines is to separate from the overall average headline sentiment the sentiment from specific journal columns. For example create a variable for the daily sentiment of all article headlines published under the "Business" column. This will show topical affects and explore if any own section of the overall WSJ has a strong impact on valuations. There were 2013 unique columns published under during the time period this study examines. To narrow down this list only columns that published at least 4 articles of day will be separated out in this way (4 articles \* 250 days \* 10 years = 10,000 headlines). Once these new daily_sent variables are created a model that uses each as a dependent variable will be made to explore the relationships.
 
 ```{r}
-#import original data
-#headline data
-read.csv("../data/cleaned_data/wsj_data_sent.csv") -> wsj_data_sent
-
-#import PE data
-read.csv("../data/cleaned_data/pe_data.csv") -> pe_data
-
-#import SPY data with some small modifications for easier join
-read_csv("../data/imported_data/spy_data.csv") |>
-    mutate(change_percent = parse_number(change_percent)/100,
-           date = parse_date_time(date, orders = "mdy"),
-           month = month(date),
-           year = year(date))->
-  spy_data
-
-#duplicate full_data 
+#duplicate full_data for seperate analysis
 full_data -> full_data_sec
-```
 
-```{r}
-#get headline columns with at least 5 a day (10 years * 250 days * 4 articles = 10,000 article)
+#get headline columns with at least 4 a day (10 years * 250 days * 4 articles = 10,000 article)
 wsj_data_sent |>
   group_by(column) |>
   summarise(count = n()) |>
   filter(count >= 10000) -> top_columns
 
-#make data set of each of the top_colums
+#make data set of each of the top_colums continaing headlines and sentiment 
 for(i in top_columns$column){
   wsj_data_sent |>
     filter(column == i) -> temp
     assign(paste("column_data_", i, sep = ""),temp)
 }
 
-#add each of the sentiments for the column to the full_data
+#add a column to the full data set for each of the topics
 for(i in top_columns$column) {
+  #first average sentiment by day and rename column with topic
   get(paste("column_data_", i, sep = "")) |>
     mutate(date = parse_date_time(str_extract(
     date, 
@@ -578,13 +568,12 @@ for(i in top_columns$column) {
     select(sentiment, date) |>
     group_by(date) |>
     summarise(daily_sent = mean(sentiment)) |>
-    inner_join(spy_data, by = c("date")) |>
-    select(date, daily_sent) |>
     rename_with(~paste("daily_sent_", i, sep = ""), .cols = c(daily_sent)) |>
     janitor::clean_names()-> temp
   
+  #join new column onto the orginal data set 
   full_data_sec |>
-      mutate(date = parse_date_time(str_extract(
+    mutate(date = parse_date_time(str_extract(
     date, 
     pattern = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"),
     orders = "ymd")) |>
@@ -592,7 +581,27 @@ for(i in top_columns$column) {
 }
 ```
 
-model with all other sentiments
+Top columns by number of articles published are:
+
+-   Business
+
+-   Commentary
+
+-   Heard on the Street
+
+-   Letters
+
+-   Politics
+
+-   Review and Outlook
+
+-   Tech
+
+-   U.S.
+
+-   World
+
+Create an auto regression model with each of the top journal columns daily_sent as dependent variables. Use a lag length of one to match previous findings to show causality.
 
 ```{r}
 #model with top column sentiments
@@ -609,11 +618,49 @@ lm(pe_ratio ~ lag(daily_sent, 1) +
      lag(daily_sent_world, 1) +
      lag(pe_ratio,1), 
    full_data_sec) -> ar_4.5
+
+#summary statistics on model 
 summary(ar_4.5)
+
+#RMSE calculation - 0.3767
+sqrt(mean(ar_4.5$residuals^2))
+
+#diagnostic plots on model
 plot(ar_4.5)
 ```
 
-summary table with all AR models
+While this model does not show any statistical significance on the coefficients for any daily_sent variable it is still highly predictive and useful to compare which journal columns affect the markets more. It is possible the lagged pe_ratio variable is overshadowing affects of the daily_sent variables so running the same model without it could improve the ability to make such conclusions
+
+```{r}
+#model with top column sentiments
+lm(pe_ratio ~ lag(daily_sent, 1) +
+     lag(daily_sent_business, 1 ) +
+     lag(daily_sent_commentary, 1) +
+     lag(daily_sent_heard_on_the_street, 1) +
+     lag(daily_sent_letters, 1) +
+     lag(daily_sent_markets, 1) +
+     lag(daily_sent_politics, 1) +
+     lag(daily_sent_review_outlook, 1) +
+     lag(daily_sent_tech, 1) +
+     lag(daily_sent_u_s, 1) +
+     lag(daily_sent_world, 1),
+   full_data_sec) -> ar_4.6
+
+#summary statistics on model 
+summary(ar_4.6)
+
+#RMSE calculation - 4.1447
+sqrt(mean(ar_4.6$residuals^2))
+
+#diagnostic plots on model
+plot(ar_4.6)
+```
+
+This last model is not very accurate, particularly when sentiment is positive, however does show statistical significance on the journal columns: Markets, World, Politics, and Tech implying they might have a bigger affect on changes in valuations than any other journal topic.
+
+## Final Table
+
+These last code chunks produce a publishable table to compares all the summary statistics of all models created in this study
 
 ```{r}
 # gather robust standard errors in a list
@@ -623,14 +670,25 @@ rob_se <- list(sqrt(diag(vcovHC(lm_4.1, type = "HC1"))),
                sqrt(diag(vcovHC(ar_4.2, type = "HC1"))),
                sqrt(diag(vcovHC(ar_4.3, type = "HC1"))),
                sqrt(diag(vcovHC(ar_4.4, type = "HC1"))),
-               sqrt(diag(vcovHC(ar_4.5, type = "HC1"))))
+               sqrt(diag(vcovHC(ar_4.5, type = "HC1"))),
+               sqrt(diag(vcovHC(ar_4.6, type = "HC1"))))
 
+#the stargazer function will sometimes break with longer function names 
+#so this is to make them shorter 
+L1 <- lm_4.1
+L2 <- lm_4.2
+A1 <- ar_4.1
+A2 <- ar_4.2
+A3 <- ar_4.3
+A4 <- ar_4.4
+A5 <- ar_4.5
+A6 <- ar_4.6
 
 #create publishing table of all models
-stargazer(lm_4.1, lm_4.2, ar_4.1, ar_4.2, ar_4.3, ar_4.4, ar_4.5,
+stargazer(L1, L2, A1, A2, A3, A4, A5, A6,
           type = "text", 
           se = rob_se,
           digits = 3,
-          column.labels = c("(LM 21", "(LM 2)", "(AR 1)", "(AR 2)", "(AR 3)", "(AR 4)", "(AR 5)"),
+          column.labels = c("(LM 1)", "(LM 2)", "(AR 1)", "(AR 2)", "(AR 3)", "(AR 4)", "(AR 5)", "(AR 6)"),
           out = "../output/models_summary_4.0.txt")
 ```
