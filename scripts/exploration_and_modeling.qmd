@@ -193,7 +193,7 @@ stargazer(full_data,
           out = "../output/data_summary.txt")
 ```
 
-# Modelling
+# Modeling
 
 ## Linear & Simple Auto Regression Models
 
