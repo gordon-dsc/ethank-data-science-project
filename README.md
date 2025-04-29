@@ -1,6 +1,6 @@
-# Data Wrangling Project Template
+# Data Science Research Project
 
-## About this template
+## Introduction
 
 The organizational structure (i.e., the specific way in which the files are nested within folders) of this repository is based on Project TIER's Documentation Protocol (version 4.0). [Project TIER](https://www.projecttier.org) (Teaching Integrity in Empirical Research), based out of Haverford College, is a multidisciplinary initiative created to promote reproducible data workflows in undergraduate curricula. In addition to hosting pedagogical training workshops for educators, Project TIER also maintains a guide, called the [TIER Protocol](https://www.projecttier.org/tier-protocol/protocol-4-0/), that outlines best practices in reproducible analysis. While this repository template takes considerable inspiration from the TIER Protocol, it differs in a couple key ways:
 
