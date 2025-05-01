@@ -1,7 +1,16 @@
 # Data Science Research Project
 
 ## Introduction
-write a really cool introduction to the research topic
+The stock market is a critical component of the US economy providing opportunities for
+companies to raise capital and investors to purchase ownership. A primary function of the
+markets is pricing companies listed for trade. For the most part this goal is efficiently
+achieved. However the stock market, like any market, is driven by the forces of supply
+and demand. Investor sentiment (feelings on the market) whether good or bad can cause 
+the market to drift from “correct” fundamentally sound valuations creating opportunities 
+for traders to substantially profit from corrections when prices revert back to fundamental valuations. This study explores whether
+news headlines from Wall Street Journal have any effect on broad S&P 500 valuations over the
+ten years from 2015 – 2024. If any significant effect exists it can be incorporating into decision
+processes to more accurately assess investment opportunity or capitalize on trading windows.
 
 ## Software and Platform
 The following is a list of all software (versions) used in this project:
