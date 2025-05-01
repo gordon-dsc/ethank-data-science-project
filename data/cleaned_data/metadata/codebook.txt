@@ -1,44 +1,28 @@
 wsj_data_sent:
 contains the wsj_data with date object and sentiment score
-headlines: headline of article
-column: column underwhich it was published
-pub_time: time aritlce was published
-url: url to article in wsj archives
-date: date time object
-sentiment: sentiment score for headline 
+headlines: character data, headline of article
+column: character data, column underwhich it was published
+pub_time: character data, time aritlce was published
+url: character data, url to article in wsj archives
+date: date time object, date article was published
+sentiment: double data, sentiment score for headline form sentimentr
 
 full_data:
 contains the S&P price data from 10 year period with pe_ratio and average wsj
-article sentiment for the day
-
-date: date of the observations
-price: price of S&P at close of day
-open: open during the day
-high: highest S&P price during the day
-low: lowest S&P price during the day
-change_percent: daily % change in price
-daily_sent: average sentiment score of wsj articles published that day
-pe_ratio: price to earnings ratio of S&P
+article sentiment for the day.
+date: date time object, date of the observations
+price: double data, price of S&P at close of day
+open: double data, open during the day
+high: double data, highest S&P price during the day
+low: double data, lowest S&P price during the day
+change_percent: double data, daily % change in price
+daily_sent: double data, average sentiment score of wsj articles published that day
+pe_ratio: double data, price to earnings ratio of S&P
 
 pe_data:
 contains the monthly pe ratio for the time period under consideration
-month: the month of the data point
-year: the year of the data point
-earnings: the earnings per share of S&P 500
-date: full date time object of the data point
-pe_ratio: price to earnings ration of S&P 500
-
-
-full_data_2.0:
-contains the S&P price data from 10 year period with pe_ratio and average wsj
-article sentiment for the day. The wsj articles used have been selected as being
-more impactful to the changes in stock market
-
-date: date of the observations
-price: price of S&P at close of day
-open: open during the day
-high: highest S&P price during the day
-low: lowest S&P price during the day
-change_percent: daily % change in price
-daily_sent: average sentiment score of wsj articles published that day
-pe_ratio: price to earnings ratio of S&P
+month: double data, the month of the data point
+year: double data, the year of the data point
+earnings: double data, the earnings per share of S&P 500
+date: date time object, date of the observation
+pe_ratio: double data, price to earnings ration of S&P 500
