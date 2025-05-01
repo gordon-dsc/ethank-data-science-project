@@ -22,7 +22,7 @@ library(dynlm) #to help with autoregression models
 
 # Import Data
 
-Import cleaned data folder
+Import from cleaned data folder
 
 ```{r}
 #import the full data set (daily data over time period with all variables of interest)
