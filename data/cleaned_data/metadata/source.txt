@@ -1,1 +1,23 @@
-all data comes from imported data folder, see source.txt there for sources
+all data comes from import data folder and shares the same sources
+
+Wall Street Journal (WSJ) data was scrapped from the WSJ archive 
+website (https://www.wsj.com/news/archive/years) 
+by following links down to the daily level from the 
+period Jan 1, 2015 to Dec 31, 2024. Information from this source
+is present in the following data files:
+- full_data.csv
+- wsj_data_sent.csv
+
+Historical S&P 500 (SPY) price data was downloaded from investing.com at the following
+webstie link (https://www.investing.com/indices/us-spx-500-historical-data).
+Entered the date range Jan 1, 2015 to Dec 31, 2024 and downloading the csv.
+Information from this source is in the following data files:
+- full_data.csv
+- full_wsj_data.csv
+- pe_data.csv
+
+Historical price to earnings (PE) ratio data was scrapped from multpl.com at the following 
+website link (https://www.multpl.com/s-p-500-pe-ratio/table/by-month). Information
+from this source is in the following data files:
+- full_data.csv
+- pe_data.csv
