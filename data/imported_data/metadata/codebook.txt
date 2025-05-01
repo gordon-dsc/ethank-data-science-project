@@ -1,4 +1,4 @@
-There are several imported data sets: wsj_data, s&p_data, pe_data
+There are several imported data sets
 
 full_wsj_data.csv:
 Contains all the headlines, journal columns, and pulbishing times for articles
