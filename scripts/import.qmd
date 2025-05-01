@@ -8,9 +8,9 @@ format: html
 Install needed packages for data import and collection
 
 ```{r packages}
-install.packages("tidyverse")
-install.packages("rvest")
-install.packages("chromote")
+install.packages("tidyverse")  #general tidyverse functions
+install.packages("rvest")      #for webscrapping
+install.packages("chromote")   #for dynamic webscrapping
 library(tidyverse)
 library(rvest)
 library(chromote)
@@ -18,13 +18,11 @@ library(chromote)
 
 # Data Collection
 
-Data for this project will consist of all headlines from the Wall Street Journal over the last ten years (January 1, 2015 through December 31, 2024). The resulting data set will have variables for title, date publication, journal column, and publishing time. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
+Data for this project will consist of all headlines from the Wall Street Journal over the ten year period from January 1, 2015 through December 31, 2024. The resulting data set will have variables for title, date of publication, journal column, and publishing time. The intent is to web scrape the WSJ archives (<https://www.wsj.com/news/archive/years>) by cycling through every year, month and day in the target range.
 
-To evaluate how news sentiment effects the markets daily stock market prices and valuations based on the S&P500 will be obtained from a variety of websites.
+To evaluate how news sentiment effects the markets daily stock market prices and valuations (will use price to earnings ratio - PE) based on the S&P 500 will be obtained from investing.com and multpl.com respectively
 
-## Web-scrapping
-
-### WSJ Scrapping
+## WSJ Scrapping
 
 The first web scrapping task will create a data set from the Wall Street Journal archives
 
@@ -34,92 +32,112 @@ First code block will generate all daily archive URLs from the time period
 #url for Wall Street Journal archives
 wsj_url <- "https://www.wsj.com/news/archive/years"
 
-#get list of all links to archive months
+#starts at archive page sepearted by years displaying links to months in every given year
+#following code will scrape the urls to the month archive pages and create a list
 read_html(wsj_url)|>
   html_elements(".WSJTheme--month-link--1N8tTFWa") |>
   html_attr("href") |>
   enframe(name = NULL, value = "month") |>
+  #once obtained the following performs some small alterations to the format of the data
   filter(str_detect(month, 
                     pattern = paste(c(as.character(c(2015:2024))), collapse = "|"))) |>
   mutate(full_urls = paste("https://www.wsj.com", month, sep = "")) ->
   month_urls
 
-x <- 1
-daily_urls <- tibble(full_urls = character())
+#next the code will work through the list of monthly_url to access the urls to the daily 
+#archive pages which contain the actual archived informaiton of interest
+x <- 1 #to control loop
+daily_urls <- tibble(full_urls = character()) #set up an empty tibble to hold daily_urls
 while (x <= length(month_urls$full_urls)) {
-  #add urls of days to data set
+  #read the list of daily urls from each month
   read_html(month_urls$full_urls[x]) |>
     html_elements(".WSJTheme--day-link--19pByDpZ") |>
     html_attr("href") |>
     enframe(name = NULL, value = "day") |>
+    #once obtained the following performs some small alterations to the format of the data
     mutate(full_daily_urls = paste("https://www.wsj.com", day, sep = "")) ->
     temp_data
   
-  #add daily urls from month to final tibble
+  #add daily urls new list of daily urls to the frame created outside the loop 
   y <- 1
   while(y <= length(temp_data$full_daily_urls)){
+      #adds each daily_url one row at a time
       add_row(daily_urls, full_urls = temp_data$full_daily_urls[y]) ->
       daily_urls
+    
+     #increment the loop
       y <- y +1
   }
+  #increment the loop
   x <- x + 1
 }
 
-#make a tibble
+#make list of daily_urls a tibble
 tibble(daily_urls) ->
   daily_urls
 
-#remove loop items from environment
+#remove unneeded loop items from environment
 rm(x)
 rm(y)
 rm(temp_data)
 rm(month_urls)
 ```
 
-split data up into ten blocks to make scrape faster
+The next step once the list of url's to the archives at the daily level has been obtained it is necessary to visit each individually and scrape the data of interest: headline, date of publication, journal column, and publishing time. Unfortunately the computer the code was written on was not powerful enough to iterate through all the daily url's at once and the list was broken into ten parts to complete it in a slower less resource intensive fashion.
 
 ```{r}
-#split data up into ten blocks for scrapping to avoid time out error
+#split data up into ten blocks for scrapping
+#first tenth
 daily_urls |>
   slice(1:365) ->
   daily_urls_1
 
+#second tenth
 daily_urls |>
   slice(366:730) ->
   daily_urls_2
 
+#third tenth
 daily_urls |>
   slice(731:1095) ->
   daily_urls_3
 
+#fourth tenth
 daily_urls |>
   slice(1096:1460) ->
   daily_urls_4
 
+#fifth tenth
 daily_urls |>
   slice(1461:1825) ->
   daily_urls_5
 
+#sixth tenth
 daily_urls |>
   slice(1826:2190) ->
   daily_urls_6
 
+#seventh tenth
 daily_urls |>
   slice(2191:2555) ->
   daily_urls_7
 
+#eigth tenth
 daily_urls |>
   slice(2556:2920) ->
   daily_urls_8
 
+#ninth tenth
 daily_urls |>
   slice(2921:3285) ->
   daily_urls_9
 
+#final tenth
 daily_urls |>
   slice(3286:3653) ->
   daily_urls_10
 
+#combine all the files into a vector to help with next steps iterations
 daily_urls_vector <- c(daily_urls_1,
                        daily_urls_2,
                        daily_urls_3,
@@ -131,34 +149,36 @@ daily_urls_vector <- c(daily_urls_1,
                        daily_urls_10)
 ```
 
-Next code block visits each daily archive URL in period and scraps title, date of publication, journal column, and publishing time. Run this chuck on each of the daily url blocks changing the reference in line 140 and 142 for each
+Next code block visits each daily archive URL in period and scraps headline, date of publication, journal column, and publishing time.
 
 ```{r}
-#loop to run the code chunck on each of the daily urls data frames
-z <- 1 #variable to control loop
+z <- 1 #variable to control which of the daily_url data files to read
 while(x <= length(daily_urls_vector)){
-
     #open headless browser tab and navigate to WSJ archive page
     #MUST HAVE CHROME RUNNING ON COMPUTER DURING EXECUTION (at least in my testing)
     options(chromote.headless = "new") #set option to use new headless mode
-    brow <- ChromoteSession$new()
-    #brow$view()
+    brow <- ChromoteSession$new() #create a new browser session within chrome for R
     
-    
+    #to control loops within each of the ten data frames of daily urls
     x <- 1
+    
+    #empty tibble with columns to hold the scrapped data 
     full_wsj_data <- tibble(
       headlines = character(),
       column = character(),
       pub_time = character(),
-      url = character()
-    )
-    while(x <= length(daily_urls_9$full_urls)){
-    #check to see if there is a next page button present
-    url_temp = daily_urls_9$full_urls[x]
-    print(x)
+      url = character())
     
+    
+    while(x <= length(get(paste("daily_urls_", z, sep = ""))$full_urls)){
+    #get url of day the following code with scrape data from
+    url_temp = get(paste("daily_urls_", z, sep = ""))$full_urls[x]
+    
+    #loop to scrape through all the pages data within this day
+    #sometimes there are multiple pages that are controlled with a next page button
+    #each needs to be scrapped individually
     repeat{
-      #scrape title
+      #scrape headline
       read_html(url_temp)|>
         html_elements(".WSJTheme--headlineText--He1ANr9C ")|>
         html_text2() -> 
@@ -180,13 +200,15 @@ while(x <= length(daily_urls_vector)){
       brow_temp <- brow$new_session()
       brow_temp$Page$navigate(url_temp) #navigate to tab
       Sys.sleep(1) #wait for website to load
-      #retrive bottom panel HTML context
+      
+      #retrive bottom panel HTML context - this is the panel that contains the next page
+      #button if it is presenet
       node <- brow_temp$DOM$querySelector(
         nodeId = brow_temp$DOM$getDocument()$root$nodeId,
         selector = ".WSJTheme--SimplePaginator__right--2syX0g5l"
       )
       
-      #if next page button exits change url to next page else advance to next day
+      #if next page button exits change url to next page, else advance to next day
       if(node$nodeId > 0) {
         #get outerHTML of the node
         html_content <- brow_temp$DOM$getOuterHTML(nodeId = node$nodeId)
@@ -196,7 +218,7 @@ while(x <= length(daily_urls_vector)){
           html_attr("href") -> url_end
       
         #add data to full_wsj_data
-        y <- 1
+        y <- 1 #to control which item of the data vectors to combine into row
         while(y <= length(headlines)){
           add_row(full_wsj_data, 
                   headlines = headlines[y],
@@ -216,7 +238,7 @@ while(x <= length(daily_urls_vector)){
         
         } else {
           #add data to full_wsj_data
-          y <- 1
+          y <- 1 #to control which item of the data vectors to combine into row
           while(y <= length(headlines)){
             add_row(full_wsj_data, 
                     headlines = headlines[y],
@@ -231,11 +253,16 @@ while(x <= length(daily_urls_vector)){
           brow_temp$close()
           rm(brow_temp)
         }
-    
+      #if there is no next page button or final page within day has been reached
+      #break out of this loop to advance to next day
       if(node$nodeId < 1){break}
     }
     
+      #iterate loop to next day's url
       x <- x + 1
+      
+      #iterate which data file to read into loop
+      z <- z + 1
     }
     
     
@@ -247,15 +274,16 @@ while(x <= length(daily_urls_vector)){
     
     #write data to csv in imported data file
     getwd()
+    #write to csv_file still 
     write_csv(x = full_wsj_data,
               file = paste("./data/imported_data/wsj_data_", z, ".csv", sep = ""))
 }
 ```
 
-Combine all data frames into one frame
+Once all the data has been collected it must be stitched together into one file
 
 ```{r}
-#read in data frames
+#read in data frames saved from last code chunck
 read_csv("../data/imported_data/wsj_data_1.csv") -> wsj_data_1
 read_csv("../data/imported_data/wsj_data_2.csv") -> wsj_data_2
 read_csv("../data/imported_data/wsj_data_3.csv") -> wsj_data_3
@@ -268,6 +296,7 @@ read_csv("../data/imported_data/wsj_data_9.csv") -> wsj_data_9
 read_csv("../data/imported_data/wsj_data_10.csv") -> wsj_data_10
 
 #combine into data frame
+#start with just table one
 full_wsj_data <- wsj_data_1
 
 #add table two
@@ -333,11 +362,12 @@ add_row(full_wsj_data,
           pub_time = wsj_data_10$pub_time,
           url = wsj_data_10$url) -> full_wsj_data
 
+#write combined file to imported_data folder
 write_csv(x = full_wsj_data,
             file = "../data/imported_data/full_wsj_data.csv")
 ```
 
-### Stock Data
+## Stock Data
 
 Downloaded S&P 500 data (SPX) from investing.com over the time period and saved to import data
 
@@ -351,11 +381,12 @@ read_csv("../data/imported_data/S&P 500 Historical Data.csv") |>
   janitor::clean_names() ->
   spy_data
 
+#save file to imported_data folder
 write_csv(x = spy_data,
             file = "../data/imported_data/spy_data.csv")
 ```
 
-### P/E Ratio Data
+## P/E Ratio Data
 
 Scrape S&P 500 historical P/E ratios from multpl.com
 
@@ -365,16 +396,19 @@ multpl_url <- "https://www.multpl.com/s-p-500-pe-ratio/table/by-month"
 
 #extract data from url table
 read_html(multpl_url) |>
+  #can scrape the table containing all the data in the website
   html_element("#datatable") |>
   html_table() |>
   janitor::clean_names() |>
+  #once obtained the following performs some small alterations to the format of the data
   mutate(date = parse_date_time(date, orders = "mdy"),
          pe_ratio = as.numeric(str_extract(value, pattern = "[0-9]...."))) |>
+  #filter for time period of interest
   filter(date < mdy("1-1-2025") & date > mdy("12-1-2014")) |>
   select(-value) -> 
   pe_ratio
   
-#save pe data
+#save pe data to imported_data folder
 write_csv(pe_ratio,
           file = "../data/imported_data/pe_ratio.csv")
 ```
