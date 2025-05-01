@@ -25,6 +25,7 @@ Entered the date range Jan 1, 2015 to Dec 31, 2024 and downloading the csv.
 Information from this source is in the following data files:
 - full_wsj_data.csv
 - spy_data.csv
+- S&P 500 Historical Data.csv
 
 Historical price to earnings (PE) ratio data was scrapped from multpl.com at the following 
 website link (https://www.multpl.com/s-p-500-pe-ratio/table/by-month). Information
