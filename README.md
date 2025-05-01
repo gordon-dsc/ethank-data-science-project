@@ -191,6 +191,12 @@ sentiment analysis or could examine industry or sector specific sources to evalu
 sentiment changes valuations at the company or sector level.
 
 ## How to Reproduce
+Follow these instructions to replicate the workflow of the project:
+1) Start with import.qmd file
+- Download to data/imported_data the S&P 500 data from investing.com over the time period Jan 1, 2015 to Dec 31, 2024 (https://www.investing.com/indices/us-spx-500-histroical-data)
+- Run all code chunks in import.qmd file following written instructions
+- Code will scrape Wall Street Journal data & price to earnings data from WSJ archives and multpl.com
+- Write all imported data files to data/imported_data
 
     -   Step-by-step instructions that make it possible for a person unfamiliar with your project to reproduce the final_data.csv file
 
