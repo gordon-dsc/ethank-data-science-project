@@ -5,20 +5,20 @@ write a really cool introduction to the research topic
 
 ## Software and Platform
 The following is a list of all software (versions) used in this project:
-    - R (4.3.2)
-    - RStudio (2024.12.0+467)
-    - git (2.39.3 Apple Git-146)
-    - tidyverse (2.0.0)
-    - rvest (1.0.4)
-    - chromote (0.5.1)
-    - sentimentr (2.9.0)
-    - stargazer (5.2.3)
-    - AER (1.2-14)
-    - dynlm (0.3-6)
+- R (4.3.2)
+- RStudio (2024.12.0+467)
+- git (2.39.3 Apple Git-146)
+- tidyverse (2.0.0)
+- rvest (1.0.4)
+- chromote (0.5.1)
+- sentimentr (2.9.0)
+- stargazer (5.2.3)
+- AER (1.2-14)
+- dynlm (0.3-6)
 
 The following is the plaform used to run the software
-    - x86_64-apple-darwin20 (64-bit)
-    - macOS Sequoia 15.4.1
+- x86_64-apple-darwin20 (64-bit)
+- macOS Sequoia 15.4.1
 
 ## Documentation Map
 
