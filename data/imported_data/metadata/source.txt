@@ -1,14 +1,33 @@
 List of data sources from which import was completed
 
-wsj_data was scrapped from the WSJ archive 
+Wall Street Journal (WSJ) data was scrapped from the WSJ archive 
 website (https://www.wsj.com/news/archive/years) 
 by following links down to the daily level from the 
-period Jan 1, 2015 to Dec 31, 2024
+period Jan 1, 2015 to Dec 31, 2024. Information from this source
+is present in the following data files:
+- full_wsj_data.csv
+- wsj_data_1.csv
+- wsj_data_2.csv
+- wsj_data_3.csv
+- wsj_data_4.csv
+- wsj_data_5.csv
+- wsj_data_6.csv
+- wsj_data_7.csv
+- wsj_data_8.csv
+- wsj_data_9.csv
+- wsj_data_10.csv
 
 
-Historical SPY price data was downloaded from investing.com at the following
+
+Historical S&P 500 (SPY) price data was downloaded from investing.com at the following
 webstie link (https://www.investing.com/indices/us-spx-500-historical-data).
-Entered the date range Jan 1, 2015 to Dec 31, 2024 and downloading the csv
+Entered the date range Jan 1, 2015 to Dec 31, 2024 and downloading the csv.
+Information from this source is in the following data files:
+- full_wsj_data.csv
+- spy_data.csv
 
-Historical PE data was scrapped from multpl.com at the following 
-website link (https://www.multpl.com/s-p-500-pe-ratio/table/by-month).
+Historical price to earnings (PE) ratio data was scrapped from multpl.com at the following 
+website link (https://www.multpl.com/s-p-500-pe-ratio/table/by-month). Information
+from this source is in the following data files:
+- full_wsj_data.csv
+- pe_ratio.csv
