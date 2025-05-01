@@ -1,7 +1,65 @@
 # Data Science Research Project
 
 ## Introduction
+write a really cool introduction to the research topic
 
+## Software and Platform
+
+    -   Software (R, RStudio, Git) and packages (e.g., httr2, rvest, tidyr, etc.) including version numbers
+
+    -   Platform (Windows, macOS) including version numbers
+
+## Documentation Map
+
+A map of your directory tree (see the example above) that includes all files and folder in your project
+
+-   project/
+
+    -   README.md
+
+    -   example_analysis.qmd
+
+    -   data/
+
+        -   imported_data/
+
+            -   metadata/
+
+                -   source.txt
+
+                -   codebook.txt
+
+        -   cleaned_data/
+
+            -   metadata/
+
+                -   source.txt
+
+                -   codebook.txt
+
+    -   scripts/
+
+        -   import.qmd
+
+        -   cleaning.qmd
+
+        -   exploration.qmd
+
+    -   output/
+
+        -   final_data.csv
+
+## Conclusion
+conclusion of project - how it answers research question
+
+## How to Reproduce
+
+    -   Step-by-step instructions that make it possible for a person unfamiliar with your project to reproduce the final_data.csv file
+
+    -   These instructions should walk through the documentation map, clearly outlining the relationships between scripts and files (e.g., the data/imported_data/example.csv file is passed into scripts/cleaning.qmd to produce final_data.csv)
+
+
+## Old README instructions
 The organizational structure (i.e., the specific way in which the files are nested within folders) of this repository is based on Project TIER's Documentation Protocol (version 4.0). [Project TIER](https://www.projecttier.org) (Teaching Integrity in Empirical Research), based out of Haverford College, is a multidisciplinary initiative created to promote reproducible data workflows in undergraduate curricula. In addition to hosting pedagogical training workshops for educators, Project TIER also maintains a guide, called the [TIER Protocol](https://www.projecttier.org/tier-protocol/protocol-4-0/), that outlines best practices in reproducible analysis. While this repository template takes considerable inspiration from the TIER Protocol, it differs in a couple key ways:
 
 1.  It simplifies the TIER Protocol in a way that is commensurate with the scope of the class project it is associated with.
