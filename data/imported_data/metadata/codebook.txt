@@ -1,25 +1,115 @@
 There are several imported data sets: wsj_data, s&p_data, pe_data
 
-wsj_data:
+full_wsj_data.csv:
 Contains all the headlines, journal columns, and pulbishing times for articles
-during the period of Jan 1, 2015 to Dec 31, 2024
-
-Description of Variables
+during the period of Jan 1, 2015 to Dec 31, 2024.
 headlines = character data, the headlines of articles
 column = character data, the journal column underwhich the article was published
 pub_time = character data, the time at which the article was published
 url = character data, the url to the site the data was scrapped from 
 
-spy_data:
+spy_data.csv:
 contains the pricing data for the S&P 500 (SPY) over the time period
-in target Jan 1, 2015 to Dec 31, 2024
-date = date of the pricing data
-price = SPY price at end of the date
-open = SPY price at begining of the day
-high = SPY high price during the day
-low = SPY low price during the day
-change % = percentage change from the day before
+in target Jan 1, 2015 to Dec 31, 2024.
+date = character data, date of the pricing data
+price = doulbe data, SPY price at end of the date
+open = double data, SPY price at begining of the day
+high = double data, SPY high price during the day
+low = double data, SPY low price during the day
+change % = character data, percentage change from the day before
 
-pe_data:
-data: month of the PE ratio
-pe_ratio: the PE ratio for the month
+pe_data.csv:
+contains the price to earnings ratio of the S&P 500 over the time period
+on a monthly basis.
+data: datetime data, month of the PE ratio
+pe_ratio: double data, the PE ratio for the month
+
+wsj_data_1.csv
+First tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_2.csv
+Second tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_3.csv
+Third tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_4.csv
+Fourth tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_5.csv
+Fifth tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_6.csv
+Sixth tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_7.csv
+Seventh tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_8.csv
+Eigth tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_9.csv
+Ninth tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
+
+wsj_data_10.csv
+Last tenth of the full_wsj_data.csv file. My computer was not strong enough
+to make the full file at once and had to do it by piecemeal and then stich
+it all back together:
+headlines = character data, the headlines of articles
+column = character data, the journal column underwhich the article was published
+pub_time = character data, the time at which the article was published
+url = character data, the url to the site the data was scrapped from 
