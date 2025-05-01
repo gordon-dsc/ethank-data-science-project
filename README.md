@@ -22,43 +22,107 @@ The following is the plaform used to run the software
 
 ## Documentation Map
 
-A map of your directory tree (see the example above) that includes all files and folder in your project
+Map of your directory tree including all files and folder in this project
 
 -   project/
 
     -   README.md
 
-    -   example_analysis.qmd
-
     -   data/
 
         -   imported_data/
 
+            -   S&P 500 Historical Data.csv
+         
+            -   full_wsj_data.csv
+         
+            -   pe_ratio.csv
+         
+            -   spy_data.csv
+         
+            -   wsj_data_1.csv
+         
+            -   wsj_data_2.csv
+         
+            -   wsj_data_3.csv
+         
+            -   wsj_data_4.csv
+         
+            -   wsj_data_5.csv
+         
+            -   wsj_data_6.csv
+         
+            -   wsj_data_7.csv
+         
+            -   wsj_data_8.csv
+         
+            -   wsj_data_9.csv
+         
+            -   wsj_data_10.csv
+         
             -   metadata/
 
                 -   source.txt
 
                 -   codebook.txt
+             
+                -   
 
         -   cleaned_data/
 
+            -   full_data.csv
+         
+            -   pe_data.csv
+         
+            -   wsj_data_sent.csv
+         
             -   metadata/
 
                 -   source.txt
 
                 -   codebook.txt
 
-    -   scripts/
-
-        -   import.qmd
-
-        -   cleaning.qmd
-
-        -   exploration.qmd
-
     -   output/
 
-        -   final_data.csv
+        -   .DS_Store
+
+        -   articles_by_day_of_week.pdf
+     
+        -   change_pre_ratio.pdf
+     
+        -   change_pe_vs_daily_sent.pdf
+     
+        -   data_summary.txt
+     
+        -   de-trended_monthly_pe_histogram.pdf
+     
+        -   de-trended_monthly_pe_line.pdf
+     
+        -   de-trended_weekly_pe_histogram.pdf
+     
+        -   de-trended_weekly_pe_line.pdf
+     
+        -   distribution_of_daily_sent.pdf
+     
+        -   full_data_sec.csv
+     
+        -   models_summary_4.0.txt
+     
+        -   pe_ratio_&_moving_averages.pdf
+     
+        -   pe_ratio_over_time.pdf
+     
+        -   pe_ratio_vs_daily_sent.pdf
+
+        -   variable_correlation_heat_map.pdf
+
+    -   scripts/
+
+        -   cleaning.qmd
+     
+        -   exploration_and_modeling.qmd
+     
+        -   import.qmd
 
 ## Conclusion
 conclusion of project - how it answers research question
