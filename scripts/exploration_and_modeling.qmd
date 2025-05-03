@@ -633,34 +633,56 @@ sqrt(mean(ar_4.5$residuals^2))
 plot(ar_4.5)
 ```
 
-While this model does not show any statistical significance on the coefficients for any daily_sent variable it is still highly predictive and useful to compare which journal columns affect the markets more. It is possible the lagged pe_ratio variable is overshadowing affects of the daily_sent variables so running the same model without it could improve the ability to make such conclusions
+While this model does not show any statistical significance on the coefficients for any daily_sent variable it is still highly predictive and useful to compare which journal columns affect the markets more. The multicolinearity present with the pe_ratio and all headline columns makes it very difficult to compare the relationships between different columns.
+
+To better compare which journal column has an affect on valuations next a BIC framework will be set up with the basic model of pe_ratio \~ pe_ratio(t-1) + daily_sent(t-1) + daily_sent_journal_column(t-1). For this framework five of the top ten journal columns will be used: Business, Markets, Politics, Review and Outlook, and Tech
 
 ```{r}
-#model with top column sentiments
-lm(pe_ratio ~ lag(daily_sent, 1) +
-     lag(daily_sent_business, 1 ) +
-     lag(daily_sent_commentary, 1) +
-     lag(daily_sent_heard_on_the_street, 1) +
-     lag(daily_sent_letters, 1) +
-     lag(daily_sent_markets, 1) +
-     lag(daily_sent_politics, 1) +
-     lag(daily_sent_review_outlook, 1) +
-     lag(daily_sent_tech, 1) +
-     lag(daily_sent_u_s, 1) +
-     lag(daily_sent_world, 1),
-   full_data_sec) -> ar_4.6
+#select only top columns of interest and only observations with no NA values
+full_data_sec |>
+  select(-daily_sent_commentary, 
+         -daily_sent_heard_on_the_street, 
+         -daily_sent_letters, 
+         -daily_sent_u_s, 
+         -daily_sent_world) |>
+  na.omit() -> temp
 
-#summary statistics on model 
-summary(ar_4.6)
+#build models for comparison
+ar_business <- lm(pe_ratio ~ lag(pe_ratio,1) + lag(daily_sent,1) + lag(daily_sent_business,1), temp)
+ar_markets <- lm(pe_ratio ~ lag(pe_ratio,1) + lag(daily_sent,1) + lag(daily_sent_markets,1), temp)
+ar_politics <- lm(pe_ratio ~ lag(pe_ratio,1) + lag(daily_sent,1) + lag(daily_sent_politics,1), temp)
+ar_review_outlook <- lm(pe_ratio ~ lag(pe_ratio,1) + lag(daily_sent,1) + 
+                          lag(daily_sent_review_outlook,1), temp)
+ar_tech <- lm(pe_ratio ~ lag(pe_ratio,1) + lag(daily_sent,1) + lag(daily_sent_tech,1), temp)
 
-#RMSE calculation - 4.1447
-sqrt(mean(ar_4.6$residuals^2))
+#make data frame to compare BIC values
+BIC_frame <- tibble(
+  #add labels
+  journal_column = c("business",
+                     "markets",
+                     "politics",
+                     "review_outlook",
+                     "tech"),
+  #add BIC value
+  bic_info = c(BIC(ar_business)[2],
+               BIC(ar_markets)[2],
+               BIC(ar_politics)[2],
+               BIC(ar_review_outlook)[2],
+               BIC(ar_tech)[2]),
+  #add beta coef from models
+  journal_col_beta_coef = c(coef(ar_business)[4],
+                            coef(ar_markets)[4],
+                            coef(ar_politics)[4],
+                            coef(ar_review_outlook)[4],
+                            coef(ar_tech)[4]))
 
-#diagnostic plots on model
-plot(ar_4.6)
+#write BIC framework file to output folder
+BIC_frame |>
+  arrange(bic_info) |>
+write_csv(file = "../output/bic_frame.csv")
 ```
 
-This last model is not very accurate, particularly when sentiment is positive, however does show statistical significance on the journal columns: Markets, World, Politics, and Tech implying they might have a bigger affect on changes in valuations than any other journal topic.
+This BIC framework shows no significant difference in BIC values between any of the five journal columns examined. However for the purpose of the analysis in order of lowest BIC (best model) to highest BIC (worst model): Politics, Review and Outlook, Business, Markets, and Tech.
 
 ## Final Table
 
@@ -674,8 +696,7 @@ rob_se <- list(sqrt(diag(vcovHC(lm_4.1, type = "HC1"))),
                sqrt(diag(vcovHC(ar_4.2, type = "HC1"))),
                sqrt(diag(vcovHC(ar_4.3, type = "HC1"))),
                sqrt(diag(vcovHC(ar_4.4, type = "HC1"))),
-               sqrt(diag(vcovHC(ar_4.5, type = "HC1"))),
-               sqrt(diag(vcovHC(ar_4.6, type = "HC1"))))
+               sqrt(diag(vcovHC(ar_4.5, type = "HC1"))))
 
 #the stargazer function will sometimes break with longer function names 
 #so this is to make them shorter 
@@ -686,13 +707,12 @@ A2 <- ar_4.2
 A3 <- ar_4.3
 A4 <- ar_4.4
 A5 <- ar_4.5
-A6 <- ar_4.6
 
 #create publishing table of all models
-stargazer(L1, L2, A1, A2, A3, A4, A5, A6,
+stargazer(L1, L2, A1, A2, A3, A4, A5,
           type = "text", 
           se = rob_se,
           digits = 3,
-          column.labels = c("(LM 1)", "(LM 2)", "(AR 1)", "(AR 2)", "(AR 3)", "(AR 4)", "(AR 5)", "(AR 6)"),
+          column.labels = c("(LM 1)", "(LM 2)", "(AR 1)", "(AR 2)", "(AR 3)", "(AR 4)", "(AR 5)"),
           out = "../output/models_summary_4.0.txt")
 ```
