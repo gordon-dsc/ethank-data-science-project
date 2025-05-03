@@ -98,6 +98,8 @@ Map of your directory tree including all files and folder in this project
 
         -   articles_by_day_of_week.pdf
      
+        -   bic_frame.csv
+     
         -   change_pre_ratio.pdf
      
         -   change_pe_vs_daily_sent.pdf
@@ -162,15 +164,16 @@ sentiment has a more immediate effect that does not last more than a couple days
 squared value increased to an impressive 0.995. Models AR 3 and AR 4 utilized a de-trending approach on 
 both the dependent pe_ratio variable and lagged pe_ratio independent variable on weekly and monthly
 time frames. Both models showed statistical significance on de-trended and lagged independent 
-variables but did not improve model predictivity over the much simpler AR 2 form. Finally AR 5
-and AR 6 breakout several of the top journal columns under which the headline sentiment data
-was published. Model AR 5 incorporates all daily_sent variables as well as previous day's
-pe_ratio and achieves the highest model predictivity shown by adjusted R squared at 0.992. Model
-AR 6 removes the previous pe_ratio term to better explore the relationships between the journal
-columns. This model shows statistical significance on the journal columns titled: Markets, World,
-Politics, and Tech implying they might have a larger impact on changes in valuations than articles
-published under other columns
-
+variables but did not improve model predictivity over the much simpler AR 2 form. Finally AR 5 breakouts
+several of the top journal columns under which the headline sentiment datawas published. 
+Model AR 5 incorporates all daily_sent variables as well as previous day's
+pe_ratio and achieves the highest model predictivity shown by adjusted R squared at 0.992. To continue
+the sectional analysis a BIC framework was constructed to compare five of the most promising
+journal columns: Business, Markets, Politics, Review and Outlook, and Tech. Only data observations
+that contained daily_sent information for all of these journal columns could be used for this BIC 
+framework so the number of observations was reduced to 1825 from the full 2516. The framework 
+resulted in little difference between these journal columns but in order from least BIC value
+(best model) to highest BIC value: Politics, Review and Outlook, Business, Markets, and Tech. 
 
 This study presents evidence that news sentiment proxied by the WSJ headlines has a
 statically significant effect on market valuations, proxied by the S&P 500 PE ratio. This supports
